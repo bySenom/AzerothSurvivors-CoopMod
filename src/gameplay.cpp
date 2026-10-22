@@ -14,6 +14,7 @@
 #include <unordered_map>
 #include "gameplay_contract.hpp"
 #include "extensions.hpp"
+#include "layout.hpp"
 
 namespace {
 struct Bytes { std::size_t capacity=0; unsigned char* pointer=reinterpret_cast<unsigned char*>(1); std::size_t length=0; };
@@ -42,7 +43,7 @@ std::atomic<std::size_t> last_session{0}, active_worlds{0};
 std::atomic<unsigned> last_opcode{0};
 std::string failure;
 std::mutex snapshot_mutex;
-constexpr std::size_t game_size=0xa20;
+constexpr std::size_t game_size=azs::layout::game_size;
 std::array<unsigned char,game_size> snapshot{};
 std::uint64_t snapshot_version=0;
 std::uint32_t last_movement_flags=0;
@@ -58,7 +59,7 @@ struct Player {
     std::vector<unsigned char> self_create;
     std::vector<std::pair<std::uint64_t,std::uint64_t>> roster;
 };
-// Rust's original constructor and login path move this whole 0xa20-byte value
+// Rust's original constructor and login path move this whole native game value
 // with memcpy. These buffers MOVE ownership; they are never independent clones.
 // Player zero lives in Server+0x10; player one owns the inactive movable value.
 std::array<Player,2> players;
@@ -89,16 +90,16 @@ bool is_movement(std::uint16_t op) { return (op>=0xb5 && op<=0xcb && op!=0xc7) |
 template<class T> T read(const void* address);
 template<class T> void store(void* address,const T& value);
 void remember_private(unsigned char* game,int player) {
-    const auto length=read<std::size_t>(game+0x5a8);
-    const auto* packets=read<Packet*>(game+0x5a0);
+    const auto length=read<std::size_t>(game+azs::layout::packets_length);
+    const auto* packets=read<Packet*>(game+azs::layout::packets_pointer);
     if(length>4096) return;
     for(std::size_t i=0;i<length;++i) if(private_opcode(packets[i].opcode))
         private_packets.try_emplace(packets[i].body.pointer,player);
 }
 void drain_player_events(unsigned char* game,int owner) {
     auto& pending_events=pending_ui_events[owner];
-    const auto capacity=read<std::size_t>(game+0x5b0),length=read<std::size_t>(game+0x5c0);
-    auto* events=read<Bytes*>(game+0x5b8);
+    const auto capacity=read<std::size_t>(game+azs::layout::events_capacity),length=read<std::size_t>(game+azs::layout::events_length);
+    auto* events=read<Bytes*>(game+azs::layout::events_pointer);
     if(length>capacity || capacity>4096) return;
     for(std::size_t i=0;i<length;++i) {
         const auto& event=events[i];
@@ -111,7 +112,7 @@ void drain_player_events(unsigned char* game,int owner) {
         if(event.capacity) free_native(event.pointer,event.capacity,1);
     }
     if(capacity) free_native(events,capacity*sizeof(Bytes),8);
-    store<std::size_t>(game+0x5b0,0); store<std::uintptr_t>(game+0x5b8,8); store<std::size_t>(game+0x5c0,0);
+    store<std::size_t>(game+azs::layout::events_capacity,0); store<std::uintptr_t>(game+azs::layout::events_pointer,8); store<std::size_t>(game+azs::layout::events_length,0);
     if(send_native_ui) {
         const auto& player=players[owner];
         auto cursor=pending_events.begin();
@@ -128,9 +129,9 @@ void swap_range(unsigned char* game,unsigned char* guest,std::size_t first,std::
     for(std::size_t i=first;i<last;++i) std::swap(game[i],guest[i]);
 }
 std::uintptr_t connection_key(std::size_t index) {
-    const auto count=read<std::size_t>(server_context+0xa70);
+    const auto count=read<std::size_t>(server_context+azs::layout::world_count);
     if(index>=count || count>32) return 0;
-    auto* worlds=read<unsigned char*>(server_context+0xa68);
+    auto* worlds=read<unsigned char*>(server_context+azs::layout::worlds);
     return read<std::uintptr_t>(worlds+index*0xb0+0x88);
 }
 int player_for(std::size_t index,bool create=false) {
@@ -152,11 +153,11 @@ void entered(int owner,bool active) {
 bool eligible(std::size_t index) {
     const auto owner=player_for(index);
     if(owner<0 || !players[owner].entered) return false;
-    auto* worlds=read<unsigned char*>(server_context+0xa68);
+    auto* worlds=read<unsigned char*>(server_context+azs::layout::worlds);
     return worlds[index*0xb0+0xa8]==1;
 }
 void reconcile_connections() {
-    const auto count=read<std::size_t>(server_context+0xa70);
+    const auto count=read<std::size_t>(server_context+azs::layout::world_count);
     if(count>32) return;
     bool alive[2]{};
     for(std::size_t i=0;i<count;++i) {
@@ -198,12 +199,12 @@ void __fastcall ui_stats(void* object,const void* data,std::size_t size) { if(lo
 void __fastcall ui_auras(void* object,const void* data,std::size_t size) { if(local_ui_allowed()) reinterpret_cast<UiNotify>(original_ui[6])(object,data,size); }
 void __fastcall ui_cooldowns(void* object,const void* data,std::size_t size) { if(local_ui_allowed()) reinterpret_cast<UiNotify>(original_ui[7])(object,data,size); }
 void guard_local_ui() {
-    auto* table=read<std::uintptr_t*>(server_context+0xff0);
+    auto* table=read<std::uintptr_t*>(server_context+azs::layout::ui_vtable);
     if(table==private_ui.data() || !table) return;
     std::copy(table,table+private_ui.size(),original_ui.begin()); private_ui=original_ui;
     private_ui[3]=reinterpret_cast<std::uintptr_t>(&ui_event); private_ui[4]=reinterpret_cast<std::uintptr_t>(&ui_stats);
     private_ui[6]=reinterpret_cast<std::uintptr_t>(&ui_auras); private_ui[7]=reinterpret_cast<std::uintptr_t>(&ui_cooldowns);
-    store(server_context+0xff0,private_ui.data());
+    store(server_context+azs::layout::ui_vtable,private_ui.data());
 }
 void __cdecl after_server_tick(void* server,double) {
     server_context=static_cast<unsigned char*>(server);
@@ -211,29 +212,23 @@ void __cdecl after_server_tick(void* server,double) {
 }
 void swap_guest(unsigned char* game) {
     swap_range(game,players[1].game.data(),0,game_size);
-    auto value=read<std::uint64_t>(server_context+0xff8);
-    store(server_context+0xff8,players[1].guid); players[1].guid=value;
-    value=read<std::uint64_t>(server_context+0x1040);
-    store(server_context+0x1040,players[1].mover); players[1].mover=value;
+    auto value=read<std::uint64_t>(server_context+azs::layout::selected_guid);
+    store(server_context+azs::layout::selected_guid,players[1].guid); players[1].guid=value;
+    value=read<std::uint64_t>(server_context+azs::layout::mover);
+    store(server_context+azs::layout::mover,players[1].mover); players[1].mover=value;
 }
 void swap_world(unsigned char* game,unsigned char* guest) {
     // Shared actors, projectiles, pickups and packet/event queues. Choice,
     // ability, aura and combat-meter collections stay with their native player.
-    swap_range(game,guest,0x520,0x5b0);
-    swap_range(game,guest,0x510,0x514); // native entity-id allocator
-    // Native terrain/spawn settings, RNG, wave index and authoritative clock.
-    swap_range(game,guest,0x8f0,0x938);
-    swap_range(game,guest,0x950,0x958);
-    swap_range(game,guest,0x990,0x9a4);
-    swap_range(game,guest,0x9ac,0x9e8);
-    swap_range(game,guest,0x9f8,0xa00);
+    // Native world collections, allocator, terrain, RNG, wave and clock.
+    for(const auto& range:azs::layout::shared_ranges) swap_range(game,guest,range.first,range.second);
 }
 void capture_players(unsigned char* game) {
     std::lock_guard lock(snapshot_mutex);
-    std::memcpy(positions[0].data(),game+0x490,16); health[0]=read<float>(game+0x4a8);
+    std::memcpy(positions[0].data(),game+azs::layout::position,16); health[0]=read<float>(game+azs::layout::health);
     if(players[1].owns_game) {
-        std::memcpy(positions[1].data(),players[1].game.data()+0x490,16);
-        health[1]=read<float>(players[1].game.data()+0x4a8);
+        std::memcpy(positions[1].data(),players[1].game.data()+azs::layout::position,16);
+        health[1]=read<float>(players[1].game.data()+azs::layout::health);
     }
 }
 void __fastcall on_tick(void* game,float dt) {
@@ -245,15 +240,15 @@ void __fastcall on_tick(void* game,float dt) {
         auto* guest=players[1].game.data();
         // Start both ready heroes together. A native upgrade/paused phase holds
         // world time while leaving each hero's choices and phase independent.
-        if(shared && active[0xa1b]==0 && guest[0xa1b]==1) active[0xa1b]=1;
-        if(shared && guest[0xa1b]==0 && active[0xa1b]==1) guest[0xa1b]=1;
-        const bool waiting=shared && ((active[0xa1b]==2 || active[0xa1b]==3) || (guest[0xa1b]==2 || guest[0xa1b]==3));
+        if(shared && active[azs::layout::phase]==0 && guest[azs::layout::phase]==1) active[azs::layout::phase]=1;
+        if(shared && guest[azs::layout::phase]==0 && active[azs::layout::phase]==1) guest[azs::layout::phase]=1;
+        const bool waiting=shared && ((active[azs::layout::phase]==2 || active[azs::layout::phase]==3) || (guest[azs::layout::phase]==2 || guest[azs::layout::phase]==3));
         const float step=waiting?0.0f:(shared && players[0].entered?dt*0.5f:dt);
         current_player=0;
         if(players[0].entered) { tick_original(game,step); remember_private(active,0); }
         if(players[0].entered && !players[0].peer_identity.empty()) drain_player_events(active,0);
-        const auto host_events=read<std::size_t>(active+0x5c0);
-        const auto* host_strings=read<Bytes*>(active+0x5b8);
+        const auto host_events=read<std::size_t>(active+azs::layout::events_length);
+        const auto* host_strings=read<Bytes*>(active+azs::layout::events_pointer);
         if(host_events && host_events<=4096) {
             const auto& event=host_strings[host_events-1];
             if(event.length<=event.capacity && event.length<2*1024*1024) {
@@ -283,9 +278,9 @@ void __fastcall on_construct(void* output,void* server) {
     construct_original(output,server);
     if(current_player>=0 && read<std::uint32_t>(output)!=2) {
         auto* bytes=static_cast<unsigned char*>(output);
-        store(bytes+0x270,players[current_player].actor_id);
-        store(bytes+0x428,players[current_player].actor_id);
-        store(static_cast<unsigned char*>(server)+0xff8,players[current_player].actor_id);
+        store(bytes+azs::layout::actor_id,players[current_player].actor_id);
+        store(bytes+azs::layout::player_guid,players[current_player].actor_id);
+        store(static_cast<unsigned char*>(server)+azs::layout::selected_guid,players[current_player].actor_id);
         entered(current_player,true);
     }
 }
@@ -298,8 +293,8 @@ void send_packet(void* destination,const Packet& packet) {
 }
 void emit_guest_ui(void* game) {
     void* destination=nullptr;
-    const auto count=read<std::size_t>(server_context+0xa70);
-    auto* worlds=read<unsigned char*>(server_context+0xa68);
+    const auto count=read<std::size_t>(server_context+azs::layout::world_count);
+    auto* worlds=read<unsigned char*>(server_context+azs::layout::worlds);
     for(std::size_t i=0;i<count;++i) if(player_for(i)==1 && eligible(i)) destination=worlds+i*0xb0;
     if(!destination) return;
     using Text=void(__fastcall*)(Bytes*,void*);
@@ -308,7 +303,7 @@ void emit_guest_ui(void* game) {
     using Addon=void(__fastcall*)(Packet*,std::uint64_t,const char*,std::size_t,const void*,std::size_t);
     auto deliver=[&](const char* prefix,Bytes& text) {
         Packet packet{};
-        entry<Addon>(azs::gameplay::addon)(&packet,read<std::uint64_t>(static_cast<unsigned char*>(game)+0x428),prefix,std::strlen(prefix),text.pointer,text.length);
+        entry<Addon>(azs::gameplay::addon)(&packet,read<std::uint64_t>(static_cast<unsigned char*>(game)+azs::layout::player_guid),prefix,std::strlen(prefix),text.pointer,text.length);
         send_packet(destination,packet);
         if(packet.body.capacity) free_native(packet.body.pointer,packet.body.capacity,1);
         if(text.capacity) free_native(text.pointer,text.capacity,1);
@@ -324,11 +319,11 @@ void emit_guest_ui(void* game) {
     };
     for(const auto& item:items) { Bytes text; entry<Text>(*item.function)(&text,game); deliver(item.prefix,text); }
     Bytes target;
-    entry<TargetText>(azs::gameplay::target_text)(&target,game,read<std::uint64_t>(server_context+0x1040)); deliver("AZSTGT",target);
+    entry<TargetText>(azs::gameplay::target_text)(&target,game,read<std::uint64_t>(server_context+azs::layout::mover)); deliver("AZSTGT",target);
     auto* bytes=static_cast<unsigned char*>(game);
-    for(const auto& item: {std::pair{"AZSMETER",std::size_t(0x628)},std::pair{"AZSHEAL",std::size_t(0x640)}}) {
+    for(const auto& item: {std::pair{"AZSMETER",std::size_t(azs::layout::damage_meter)},std::pair{"AZSHEAL",std::size_t(azs::layout::healing_meter)}}) {
         Bytes text;
-        entry<MeterText>(azs::gameplay::meter_text)(&text,read<void*>(bytes+item.second+8),read<std::size_t>(bytes+item.second+16),read<float>(bytes+0x994));
+        entry<MeterText>(azs::gameplay::meter_text)(&text,read<void*>(bytes+item.second+8),read<std::size_t>(bytes+item.second+16),read<float>(bytes+azs::layout::clock));
         deliver(item.first,text);
     }
     guest_ui_updates.fetch_add(1);
@@ -349,8 +344,8 @@ std::vector<unsigned char> remote_create(const Packet& packet) {
     return result;
 }
 void exchange_heroes(std::size_t guest_index) {
-    const auto count=read<std::size_t>(server_context+0xa70);
-    auto* worlds=read<unsigned char*>(server_context+0xa68);
+    const auto count=read<std::size_t>(server_context+azs::layout::world_count);
+    auto* worlds=read<unsigned char*>(server_context+azs::layout::worlds);
     for(std::size_t i=0;i<count;++i) if(player_for(i)==0) {
         auto deliver=[&](std::size_t index,const std::vector<unsigned char>& body) {
             if(body.empty()) return;
@@ -381,12 +376,12 @@ void __fastcall on_command(void* server,std::size_t session,std::uint16_t opcode
         auto* game=server_context+0x10;
         std::array<unsigned char,game_size> saved;
         std::memcpy(saved.data(),game,game_size);
-        const auto guid=read<std::uint64_t>(server_context+0xff8),mover=read<std::uint64_t>(server_context+0x1040);
+        const auto guid=read<std::uint64_t>(server_context+azs::layout::selected_guid),mover=read<std::uint64_t>(server_context+azs::layout::mover);
         store<std::uint32_t>(game,2); suppress_preview_ui=true;
         command_original(server,session,opcode,body,length);
         if(read<std::uint32_t>(game)!=2) destroy_native(game);
         std::memcpy(game,saved.data(),game_size);
-        store(server_context+0xff8,guid); store(server_context+0x1040,mover);
+        store(server_context+azs::layout::selected_guid,guid); store(server_context+azs::layout::mover,mover);
         return;
     }
     int who=contexts.load()?player_for(session):-1;
@@ -408,7 +403,7 @@ void __fastcall on_command(void* server,std::size_t session,std::uint16_t opcode
     current_player=who;
     if(contexts.load() && who>=0 && (opcode==0x4a || opcode==0x4b)) {
         entered(who,false);
-        auto* worlds=read<unsigned char*>(server_context+0xa68);
+        auto* worlds=read<unsigned char*>(server_context+azs::layout::worlds);
         worlds[session*0xb0+0xa8]=0;
         Packet complete{{},0x4d,{}}; send_packet(worlds+session*0xb0,complete);
         if(!players[0].entered && !players[1].entered) {
@@ -425,15 +420,15 @@ void __fastcall on_command(void* server,std::size_t session,std::uint16_t opcode
         alignas(16) std::array<unsigned char,game_size> primary;
         auto* game=server_context+0x10;
         std::memcpy(primary.data(),game,game_size);
-        const auto guid=read<std::uint64_t>(server_context+0xff8),mover=read<std::uint64_t>(server_context+0x1040);
+        const auto guid=read<std::uint64_t>(server_context+azs::layout::selected_guid),mover=read<std::uint64_t>(server_context+azs::layout::mover);
         store<std::uint32_t>(game,2); // MOVE old game out, prevent original destructor from dropping it
         command_original(server,session,opcode,body,length);
         if(read<std::uint32_t>(game)!=2) {
             std::memcpy(players[1].game.data(),game,game_size); players[1].owns_game=true;
-            players[1].mover=read<std::uint64_t>(server_context+0x1040);
+            players[1].mover=read<std::uint64_t>(server_context+azs::layout::mover);
         }
         std::memcpy(game,primary.data(),game_size);
-        store(server_context+0xff8,guid); store(server_context+0x1040,mover);
+        store(server_context+azs::layout::selected_guid,guid); store(server_context+azs::layout::mover,mover);
         exchange_heroes(session);
     } else if(who==1 && players[1].owns_game) {
         const bool shared=shared_world.load();
@@ -451,7 +446,7 @@ void __fastcall on_command(void* server,std::size_t session,std::uint16_t opcode
     }
     if(who>=0 && is_movement(opcode) && length>=28) {
         const auto* actor=who==1?players[1].game.data():server_context+0x10;
-        const auto guid=read<std::uint64_t>(actor+0x428);
+        const auto guid=read<std::uint64_t>(actor+azs::layout::player_guid);
         std::vector<unsigned char> relay(1,0);
         for(unsigned i=0;i<8;++i) {
             const auto value=static_cast<unsigned char>(guid>>(i*8));
@@ -459,8 +454,8 @@ void __fastcall on_command(void* server,std::size_t session,std::uint16_t opcode
         }
         relay.insert(relay.end(),body,body+length);
         Packet packet{{0,relay.data(),relay.size()},opcode,{}};
-        const auto count=read<std::size_t>(server_context+0xa70);
-        auto* worlds=read<unsigned char*>(server_context+0xa68);
+        const auto count=read<std::size_t>(server_context+azs::layout::world_count);
+        auto* worlds=read<unsigned char*>(server_context+azs::layout::worlds);
         for(std::size_t i=0;i<count;++i) if(i!=session && eligible(i)) {
             send_packet(worlds+i*0xb0,packet); movement_relays.fetch_add(1);
         }
@@ -487,8 +482,8 @@ void __fastcall on_serialize(void* source,const Packet* packet,Bytes* output) {
         // which can be a character-picker backdrop. Route only to heroes that
         // actually entered the world; a menu's authenticated stream is insufficient.
         frame_packets.fetch_add(1);
-        const auto count=read<std::size_t>(server_context+0xa70);
-        auto* worlds=read<unsigned char*>(server_context+0xa68);
+        const auto count=read<std::size_t>(server_context+azs::layout::world_count);
+        auto* worlds=read<unsigned char*>(server_context+azs::layout::worlds);
         std::size_t active=0;
         if(count>32) return;
         for(std::size_t i=0;i<count;++i) if(eligible(i)) {
@@ -503,8 +498,8 @@ void __fastcall on_serialize(void* source,const Packet* packet,Bytes* output) {
         active_worlds.store(active); return;
     }
     if(only_player==1) {
-        const auto count=read<std::size_t>(server_context+0xa70);
-        auto* worlds=read<unsigned char*>(server_context+0xa68);
+        const auto count=read<std::size_t>(server_context+azs::layout::world_count);
+        auto* worlds=read<unsigned char*>(server_context+azs::layout::worlds);
         for(std::size_t i=0;i<count;++i) if(player_for(i)==1) send_packet(worlds+i*0xb0,*packet);
         return;
     }
@@ -536,8 +531,8 @@ void __fastcall on_serialize(void* source,const Packet* packet,Bytes* output) {
     if(!frame) return;
     frame_packets.fetch_add(1,std::memory_order_relaxed);
     if(only_player==0 || !replicate.load(std::memory_order_relaxed) || !server_context) return;
-    const auto count=read<std::size_t>(server_context+0xa70);
-    auto* worlds=read<unsigned char*>(server_context+0xa68);
+    const auto count=read<std::size_t>(server_context+azs::layout::world_count);
+    auto* worlds=read<unsigned char*>(server_context+azs::layout::worlds);
     if(count>32 || !worlds) return;
     std::size_t active=0;
     for(std::size_t i=0;i<count;++i) {

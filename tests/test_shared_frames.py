@@ -1,7 +1,7 @@
 """Integration check for native frame replication; independent heroes are NOT asserted."""
 from pathlib import Path
 import argparse, collections, json, select, struct, subprocess, time
-from native_client import NativeClient
+from native_client import NativeClient,GAME_OFFSETS
 from inspect_native_sessions import enter
 
 ROOT=Path(__file__).resolve().parents[1]
@@ -48,7 +48,7 @@ def main():
     print(json.dumps({k:v for k,v in result.items() if k not in ('before','after_first','after_second')},indent=2))
     for key in ('before','after_first','after_second'):
         data=bytes.fromhex(result[key]['game_bytes'])
-        print(key,'native player position',struct.unpack_from('<4f',data,0x490),
-              'native run seconds',struct.unpack_from('<f',data,0x994)[0],'native phase byte',data[0xa1b])
+        print(key,'native player position',struct.unpack_from('<4f',data,GAME_OFFSETS['position']),
+              'native run seconds',struct.unpack_from('<f',data,GAME_OFFSETS['clock'])[0],'native phase byte',data[GAME_OFFSETS['phase']])
 
 if __name__=='__main__':main()

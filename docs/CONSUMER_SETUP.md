@@ -19,10 +19,15 @@ Previous runtime versions are retained. The helper does not migrate the ZIP
 installation into the per-user app folder or create shortcuts. The game folder
 must be writable. Profiles/settings stay in the existing per-user data directory.
 
+dev.8 includes both the inspected current Windows adapter and the previous
+0.104.0 adapter. The latter's native files live under bin/legacy. The exact game
+hash selects the CLI and DLL set together; every listed native file is included
+in the runtime manifest and setup/ZIP payload. See NATIVE_ADAPTERS.md.
+
 ## Distribution
 
 dist/AzerothSurvivors-Koop-Setup.exe is a single Windows x64 GUI executable,
-roughly 2.3 MB. It embeds only the runtime: desktop launcher, native mod files,
+roughly 4.6 MB with both adapters. It embeds only the runtime: desktop launcher, native mod files,
 backend launch script, metadata, compatibility adapter and MinHook license.
 No game EXE, MPQs, assets, profiles or machine-specific starter is included.
 The package metadata has no hard-coded user path.

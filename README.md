@@ -33,7 +33,14 @@ Setup-Installation kann als Rückfall geöffnet werden.
 
 ## Spielkompatibilität
 
-Aktuell unterstützt: 0.104.0 / 9845e5c7, EXE SHA-256:
+Ab dev.8 unterstützt: der untersuchte Windows-Build mit 140.514.816 Bytes,
+EXE SHA-256:
+
+    dc10453398ceb398076f6d3b6ac7859470de2ff7ccd68ac1d00a02f9f1e5209a
+
+Dieser Build wird anhand seiner Prüfsumme identifiziert; eine offizielle
+Versionsnummer wird nicht aus Dateidatum oder Bibliotheksversionen abgeleitet.
+Zusätzlich bleibt 0.104.0 / 9845e5c7 unterstützt, EXE SHA-256:
 
     96e24dcd0e53fc13a6fdef5826aa46f77a29aa1aad4abd585adf04e94b2756d3
 
@@ -66,6 +73,10 @@ Visual Studio 2022 C++ x64, CMake und .NET Framework 4.8:
 Die Tests benötigen keine Spiel-Assets. Die optionalen nativen Startup-Tests
 benötigen eine eigene unterstützte Spielinstallation. Die generierten Bindings
 sind enthalten; für erneutes Auslesen werden Python und pefile benötigt.
+Der Build erstellt getrennte native Module für beide unterstützten ABIs. Die
+Auswahl erfolgt anhand des vollständigen Spiel-Hashes vor dem Start; die Module
+prüfen anschließend ihre nativen Einsprungstellen. src/layout.hpp enthält die
+jeweiligen Speicherlayouts. Siehe [Build-Adapter](docs/NATIVE_ADAPTERS.md).
 
 Der private Release-Schlüssel ist nicht enthalten. Ein eigener Build besitzt
 keine Berechtigung, Updates für die bestehenden Mod-Installationen

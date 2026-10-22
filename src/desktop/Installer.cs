@@ -60,7 +60,7 @@ namespace AzerothCoop.Desktop
             var records = ((IEnumerable)manifest["files"]).Cast<Dictionary<string, object>>().ToList();
             var expected = new[] { "AzerothCoop.exe", "azs_coop.dll", "azs_transport.dll", "azs_gameplay.dll", "azs_lobby.dll", Startup.LauncherName };
             var listed = ((IEnumerable)metadata["nativeFiles"]).Cast<string>().Concat(((IEnumerable)metadata["desktopFiles"]).Cast<string>()).ToArray();
-            if (listed.Length != expected.Length || !listed.OrderBy(n => n).SequenceEqual(expected.OrderBy(n => n)))
+            if (listed.Distinct().Count() != listed.Length || expected.Any(n => !listed.Contains(n)))
                 throw new IOException("Das Mod-Paket ist unvollständig.");
             foreach (var group in new[] { "nativeFiles", "desktopFiles" })
             {

@@ -1,13 +1,29 @@
 {
   "id": "azeroth-survivors-coop",
   "name": "Azeroth Survivors Co-op Mod",
-  "version": "0.1.0-dev.7",
+  "version": "0.1.0-dev.8",
   "status": "development",
   "players": 2,
   "transportProtocol": 2,
   "defaultGamePath": "",
   "dataDirectoryName": "AzerothSurvivorsCoopMod",
-  "compatibleBuilds": ["compat/0.104.0-9845e5c7.json"],
-  "nativeFiles": ["AzerothCoop.exe", "azs_coop.dll", "azs_transport.dll", "azs_gameplay.dll", "azs_lobby.dll"],
-  "desktopFiles": ["Azeroth Survivors Koop.exe"]
+  "compatibleBuilds": [
+    "compat/windows-dc104533.json",
+    "compat/0.104.0-9845e5c7.json"
+  ],
+  "nativeFiles": [
+    "AzerothCoop.exe",
+    "azs_coop.dll",
+    "azs_transport.dll",
+    "azs_gameplay.dll",
+    "azs_lobby.dll",
+    "legacy/AzerothCoop.exe",
+    "legacy/azs_coop.dll",
+    "legacy/azs_transport.dll",
+    "legacy/azs_gameplay.dll",
+    "legacy/azs_lobby.dll"
+  ],
+  "desktopFiles": [
+    "Azeroth Survivors Koop.exe"
+  ]
 }

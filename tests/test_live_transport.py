@@ -3,7 +3,7 @@ from pathlib import Path
 import argparse,json,socket,struct,subprocess,time,secrets
 
 ROOT=Path(__file__).resolve().parents[1]
-SHA=b'96e24dcd0e53fc13a6fdef5826aa46f77a29aa1aad4abd585adf04e94b2756d3'
+from native_client import BUILD_SHA as SHA
 TOKEN=b'0123456789abcdef0123456789abcdef'
 
 def exact(connection,count):

@@ -23,6 +23,7 @@
 #include "build_contract.hpp"
 #include "transport_contract.hpp"
 #include "extensions.hpp"
+#include "layout.hpp"
 
 extern "C" { void* azs_new_pair_address = nullptr; }
 namespace {
@@ -110,7 +111,7 @@ void __cdecl deliver_ui(void* server,double) {
     { std::lock_guard lock(ui_incoming_mutex); pending.swap(ui_incoming); }
     auto* bytes=static_cast<unsigned char*>(server);
     void* object=nullptr; std::uintptr_t* vtable=nullptr;
-    std::memcpy(&object,bytes+0xfe8,8); std::memcpy(&vtable,bytes+0xff0,8);
+    std::memcpy(&object,bytes+azs::layout::ui_object,8); std::memcpy(&vtable,bytes+azs::layout::ui_vtable,8);
     if(!object || !vtable) return;
     using Notify=void(__fastcall*)(void*,const char*,std::size_t);
     const auto callback=reinterpret_cast<Notify>(vtable[3]);
@@ -453,10 +454,10 @@ DWORD WINAPI initialize(void*) {
             failure = "native_transport_signature_mismatch"; break;
         }
     }
-    open_original = native<OpenLocal>(0x05878ce0);
-    write_original = native<WriteLocal>(0x059b4170); drain_original = native<DrainLocal>(0x059b42d0);
-    drop_original = native<DropLocal>(0x00fdb740); free_original = native<Deallocate>(0x000021d0);
-    azs_new_pair_address = native<void*>(0x059b5140);
+    open_original = native<OpenLocal>(azs::open_rva);
+    write_original = native<WriteLocal>(azs::write_rva); drain_original = native<DrainLocal>(azs::drain_rva);
+    drop_original = native<DropLocal>(azs::drop_rva); free_original = native<Deallocate>(azs::free_rva);
+    azs_new_pair_address = native<void*>(azs::pair_rva);
     WSADATA data{}; if (WSAStartup(MAKEWORD(2,2),&data)) failure = "winsock_initialization_failed";
     if(BCryptGenRandom(nullptr,client_identity.data(),static_cast<ULONG>(client_identity.size()),BCRYPT_USE_SYSTEM_PREFERRED_RNG)!=0) failure="client_identity_generation_failed";
     HANDLE thread = CreateThread(nullptr,0,control,nullptr,0,nullptr); if(thread) CloseHandle(thread);

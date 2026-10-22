@@ -31,7 +31,7 @@ function Get-Compatibility([string]$Path) {
     $state.reason='unsupported_game_build'
     foreach($file in $metadata.compatibleBuilds) {
         $adapter=Get-Content -LiteralPath (Join-Path $root $file) -Raw | ConvertFrom-Json
-        if($adapter.executableSha256 -eq $state.gameSha256){$state.compatible=$true;$state.reason='supported';$state.gameVersion=$adapter.gameVersion;break}
+        if($adapter.executableSha256 -eq $state.gameSha256){$state.compatible=$true;$state.reason='supported';$state.gameVersion=$adapter.gameVersion;$state.nativeDirectory=[string]$adapter.nativeDirectory;break}
     }
     if(!$state.compatible){return [pscustomobject]$state}
     if(!(Test-Path -LiteralPath (Join-Path (Split-Path -Parent $state.gamePath) 'Data') -PathType Container)){$state.compatible=$false;$state.reason='game_data_missing';return [pscustomobject]$state}
@@ -53,9 +53,11 @@ function New-RoomToken {
     try{$random.GetBytes($bytes)}finally{$random.Dispose()}
     return -join ($bytes | ForEach-Object {$_.ToString('x2')})
 }
-function Invoke-Native([string[]]$Arguments) {
+function Invoke-Native([string[]]$Arguments,[string]$NativeDirectory='') {
     $start=New-Object Diagnostics.ProcessStartInfo
-    $start.FileName=Join-Path $root 'bin\AzerothCoop.exe'
+    $nativeBin=Join-Path $root 'bin'
+    if($NativeDirectory){$nativeBin=Join-Path $nativeBin $NativeDirectory}
+    $start.FileName=Join-Path $nativeBin 'AzerothCoop.exe'
     # Canonical file paths cannot contain quotes; values ending in a slash are
     # normalized before this call. Validate all non-path values below.
     $start.Arguments=($Arguments | ForEach-Object {'"'+$_+'"'}) -join ' '
@@ -79,6 +81,9 @@ function Start-Mod([string]$LaunchMode,[string]$Path,[string]$ProfileName,[strin
     if($HostPort -lt 1024 -or $HostPort -gt 65535){throw 'Use a port between 1024 and 65535.'}
     $compatibility=Get-Compatibility $Path
     if(!$compatibility.compatible){throw "Compatibility check: $($compatibility.reason). Your mod files and characters are preserved. A changed game build needs an updated compatibility adapter."}
+    $nativeDirectory=[string]$compatibility.nativeDirectory
+    $nativeBin=Join-Path $root 'bin'
+    if($nativeDirectory){$nativeBin=Join-Path $nativeBin $nativeDirectory}
     $profilePath=Join-Path $DataRoot "profiles\$ProfileName"
     $gameDirectory=(Split-Path -Parent $compatibility.gamePath).TrimEnd('\')+'\'
     if(($DataRoot.TrimEnd('\')+'\').StartsWith($gameDirectory,[StringComparison]::OrdinalIgnoreCase)){throw 'Keep mod profiles outside the game directory.'}
@@ -98,21 +103,21 @@ function Start-Mod([string]$LaunchMode,[string]$Path,[string]$ProfileName,[strin
     @{gamePath=$compatibility.gamePath;profile=$ProfileName;address=$HostAddress;port=$HostPort;roomToken=$Token} | ConvertTo-Json | Set-Content -LiteralPath $settingsFile -Encoding UTF8
     if($LaunchMode -eq 'Play') {
         $command=if($Minimized){'play-probe'}else{'play'}
-        $nativeArguments=@($command,$compatibility.gamePath,$profilePath,(Join-Path $root 'bin\azs_coop.dll'),
-            (Join-Path $root 'bin\azs_transport.dll'),(Join-Path $root 'bin\azs_gameplay.dll'),(Join-Path $root 'bin\azs_lobby.dll'))
+        $nativeArguments=@($command,$compatibility.gamePath,$profilePath,(Join-Path $nativeBin 'azs_coop.dll'),
+            (Join-Path $nativeBin 'azs_transport.dll'),(Join-Path $nativeBin 'azs_gameplay.dll'),(Join-Path $nativeBin 'azs_lobby.dll'))
     } else {
         $command=if($LaunchMode -eq 'Host'){if($Minimized){'host-probe'}else{'host'}}else{if($Minimized){'join-probe'}else{'join'}}
-        $nativeArguments=@($command,$compatibility.gamePath,$profilePath,(Join-Path $root 'bin\azs_coop.dll'),
-            (Join-Path $root 'bin\azs_transport.dll'),$HostAddress,[string]$HostPort,$Token)
+        $nativeArguments=@($command,$compatibility.gamePath,$profilePath,(Join-Path $nativeBin 'azs_coop.dll'),
+            (Join-Path $nativeBin 'azs_transport.dll'),$HostAddress,[string]$HostPort,$Token)
     }
-    $rows=Invoke-Native -Arguments $nativeArguments
+    $rows=Invoke-Native -Arguments $nativeArguments -NativeDirectory $nativeDirectory
     $instance=@($rows | Where-Object {$_.phase -eq 'native-integration-probe'})[-1]
     if(!$instance.pid){throw 'The native game instance did not report its process ID.'}
     try {
         if($LaunchMode -eq 'Host') {
-            $attach=@(Invoke-Native -Arguments @('attach-gameplay',[string]$instance.pid,(Join-Path $root 'bin\azs_gameplay.dll')))
+            $attach=@(Invoke-Native -Arguments @('attach-gameplay',[string]$instance.pid,(Join-Path $nativeBin 'azs_gameplay.dll')) -NativeDirectory $nativeDirectory)
             if(!$attach[-1].hooks_installed){throw 'The gameplay module did not initialize.'}
-            foreach($setting in @('contexts','shared','replication')){$null=Invoke-Native -Arguments @('gameplay',[string]$instance.pid,$setting,'on')}
+            foreach($setting in @('contexts','shared','replication')){$null=Invoke-Native -Arguments @('gameplay',[string]$instance.pid,$setting,'on') -NativeDirectory $nativeDirectory}
         }
     } catch {
         # Cleanup is restricted to the child reported by this launch operation.

@@ -7,10 +7,13 @@ replacement or multiplayer gameplay acceptance. Only the fan game's fixed local
 SURVIVOR test identity is used. No user account/session material is logged.
 """
 from pathlib import Path
-import hashlib,json,secrets,socket,struct,zlib
+import hashlib,json,os,secrets,socket,struct,zlib
 
 ROOT=Path(__file__).resolve().parents[1]
-BUILD_SHA=b'96e24dcd0e53fc13a6fdef5826aa46f77a29aa1aad4abd585adf04e94b2756d3'
+BUILD_SHA=os.environ.get('AZS_TEST_GAME_SHA','dc10453398ceb398076f6d3b6ac7859470de2ff7ccd68ac1d00a02f9f1e5209a').encode('ascii')
+assert len(BUILD_SHA)==64 and all(c in b'0123456789abcdef' for c in BUILD_SHA)
+GAME_OFFSETS = ({'position':0x490,'clock':0x994,'phase':0xa1b} if BUILD_SHA.startswith(b'96e24dcd') else
+                {'position':0x4d0,'clock':0xa4c,'phase':0xadf})
 USER=b'SURVIVOR'
 PASSWORD=b'SURVIVOR'
 def h(*parts): return hashlib.sha1(b''.join(parts)).digest()

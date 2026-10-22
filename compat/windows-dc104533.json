@@ -1,0 +1,59 @@
+{
+  "gameVersion": "Windows build dc104533",
+  "gameRevision": "dc104533",
+  "platform": "windows-x64",
+  "executableSha256": "dc10453398ceb398076f6d3b6ac7859470de2ff7ccd68ac1d00a02f9f1e5209a",
+  "preferredImageBase": "0x140000000",
+  "nativeDirectory": "",
+  "nativeBindings": [
+    "src/contracts/current/build_contract.hpp",
+    "src/contracts/current/transport_contract.hpp",
+    "src/contracts/current/gameplay_contract.hpp",
+    "src/contracts/current/lobby_contract.hpp"
+  ],
+  "unknownBuildPolicy": "Reject unknown hashes and mismatched native signatures.",
+  "native": {
+    "contractDirectory": "current",
+    "server": {
+      "tick": "0x58aee30",
+      "pending_connections_length": "0xb00",
+      "auth_connections_length": "0xb18",
+      "world_sessions_length": "0xb30",
+      "minimum_server_span": "0xb38"
+    },
+    "transport": {
+      "open": "0x58ae240",
+      "write": "0x5a23a40",
+      "drain": "0x5a23ba0",
+      "drop": "0xbb1550",
+      "pair": "0x5a24a10",
+      "free": "0x21d0"
+    },
+    "gameplay": {
+      "write": "0x5a23a40",
+      "serialize": "0x58c1650",
+      "command": "0x58b3d60",
+      "game_tick": "0x58fb890",
+      "construct": "0x58bf6d0",
+      "destroy": "0x58acfe0",
+      "addon": "0x58c4630",
+      "run_text": "0x58e3090",
+      "stats_text": "0x58e93b0",
+      "zone_text": "0x58e41c0",
+      "boss_text": "0x58e6d40",
+      "units_text": "0x58e5670",
+      "debuffs_text": "0x58e5f60",
+      "target_text": "0x58e5b10",
+      "spells_text": "0x58e59e0",
+      "buffs_text": "0x58e50b0",
+      "chests_text": "0x58e58a0",
+      "lairs_text": "0x58e51d0",
+      "taken_text": "0x58e5350",
+      "end_text": "0x58e2570",
+      "meter_text": "0x5998f20",
+      "free": "0x21d0"
+    },
+    "picker": "0x58bd380",
+    "frameSerializeReturn": "0x58b096e"
+  }
+}

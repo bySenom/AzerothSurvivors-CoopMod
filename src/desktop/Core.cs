@@ -92,7 +92,7 @@ namespace AzerothCoop.Desktop
             {
                 if (Compatible) return "Die Koop-Mod passt zu deinem Spiel. Solo oder Koop wählst du anschließend im Spiel.";
                 if (Reason == "game_not_found") return "Wähle einmal deine AzerothSurvivors.exe. Die App merkt sich deine Auswahl.";
-                if (Reason == "unsupported_game_build") return "Für dieses Spielupdate fehlt noch die passende Mod-Anpassung. Wähle eine unterstützte Installation (0.104.0 / 9845e5c7). Deine Spielstände bleiben erhalten.";
+                if (Reason == "unsupported_game_build") return "Für diesen Spielbuild fehlt noch die passende Mod-Anpassung. Prüfe, ob ein Mod-Update verfügbar ist, oder wähle eine unterstützte Installation. Deine Spielstände bleiben erhalten.";
                 if (Reason == "game_data_missing") return "Neben der Spieldatei muss der vollständige Data-Ordner des Spiels liegen.";
                 if (Reason.StartsWith("native_package") || Reason == "build_mod_first") return "Entpacke das vollständige Mod-ZIP erneut in den Spielordner oder repariere eine ältere Setup-Installation mit deren Setup. Deine Spielstände bleiben erhalten.";
                 return "Wähle die Spieldatei erneut. Einzelheiten findest du unter Hilfe.";

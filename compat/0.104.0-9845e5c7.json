@@ -4,6 +4,56 @@
   "platform": "windows-x64",
   "executableSha256": "96e24dcd0e53fc13a6fdef5826aa46f77a29aa1aad4abd585adf04e94b2756d3",
   "preferredImageBase": "0x140000000",
-  "nativeBindings": ["src/build_contract.hpp", "src/transport_contract.hpp", "src/gameplay_contract.hpp", "src/lobby_contract.hpp"],
-  "unknownBuildPolicy": "Do not inject. Preserve mod source and persistent profiles. Refresh this native compatibility adapter after inspecting the new game build."
+  "nativeBindings": [
+    "src/build_contract.hpp",
+    "src/transport_contract.hpp",
+    "src/gameplay_contract.hpp",
+    "src/lobby_contract.hpp"
+  ],
+  "unknownBuildPolicy": "Do not inject. Preserve mod source and persistent profiles. Refresh this native compatibility adapter after inspecting the new game build.",
+  "nativeDirectory": "legacy",
+  "native": {
+    "contractDirectory": "legacy",
+    "server": {
+      "tick": "0x58798d0",
+      "pending_connections_length": "0xa40",
+      "auth_connections_length": "0xa58",
+      "world_sessions_length": "0xa70",
+      "minimum_server_span": "0xa78"
+    },
+    "transport": {
+      "open": "0x5878ce0",
+      "write": "0x59b4170",
+      "drain": "0x59b42d0",
+      "drop": "0xfdb740",
+      "pair": "0x59b5140",
+      "free": "0x21d0"
+    },
+    "gameplay": {
+      "serialize": "0x588bc40",
+      "command": "0x587e730",
+      "game_tick": "0x58feb20",
+      "construct": "0x5889fa0",
+      "destroy": "0x5877f50",
+      "addon": "0x588e770",
+      "run_text": "0x58e58b0",
+      "stats_text": "0x58ed490",
+      "zone_text": "0x58e6740",
+      "boss_text": "0x58e92c0",
+      "units_text": "0x58e7bf0",
+      "debuffs_text": "0x58e84e0",
+      "target_text": "0x58e8090",
+      "spells_text": "0x58e7f60",
+      "buffs_text": "0x58e7630",
+      "chests_text": "0x58e7e20",
+      "lairs_text": "0x58e7750",
+      "taken_text": "0x58e78d0",
+      "end_text": "0x58e4d90",
+      "meter_text": "0x58b2120",
+      "write": "0x59b4170",
+      "free": "0x21d0"
+    },
+    "picker": "0x5887c50",
+    "frameSerializeReturn": "0x587b43e"
+  }
 }
