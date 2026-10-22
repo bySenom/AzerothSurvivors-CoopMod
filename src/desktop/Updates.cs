@@ -211,7 +211,9 @@ namespace AzerothCoop.Desktop
         {
             VerifyFile(setup, offer);
             if (GameRunning(backend.Paths)) throw new IOException("Beende zuerst dein Mod-Spiel. Das Update wartet auf dich.");
-            Process.Start(new ProcessStartInfo(setup, "/update " + parent + " /quiet" + (open ? "" : " /no-open")) { UseShellExecute = false, CreateNoWindow = true });
+            string portable = backend.PortableGameRoot;
+            Process.Start(new ProcessStartInfo(setup, "/update " + parent + " /quiet" + (open ? "" : " /no-open") +
+                (portable == null ? "" : " /portable " + Backend.Quote(portable))) { UseShellExecute = false, CreateNoWindow = true });
         }
     }
 }

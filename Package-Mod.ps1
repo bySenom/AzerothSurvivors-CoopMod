@@ -20,6 +20,8 @@ $files+=@($metadata.nativeFiles | ForEach-Object {Get-Item -LiteralPath (Join-Pa
 $files+=@($metadata.desktopFiles | ForEach-Object {Get-Item -LiteralPath (Join-Path $root ('bin\'+$_))})
 $files+=@(Get-Item -LiteralPath (Join-Path $root 'dist\AzerothSurvivors-Koop-Setup.exe'))
 $files+=@(Get-Item -LiteralPath (Join-Path $root 'dist\AzerothSurvivors-Koop-Setup.exe.sha256'))
+$files+=@(Get-Item -LiteralPath (Join-Path $root 'dist\AzerothSurvivors-Koop-Mod.zip'))
+$files+=@(Get-Item -LiteralPath (Join-Path $root 'dist\AzerothSurvivors-Koop-Mod.zip.sha256'))
 $files+=@(Get-ChildItem -LiteralPath (Join-Path $root 'dist') -Filter 'update.json*' -File)
 Add-Type -AssemblyName System.IO.Compression
 Add-Type -AssemblyName System.IO.Compression.FileSystem

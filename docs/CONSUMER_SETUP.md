@@ -1,7 +1,23 @@
-# Desktop installation - dev.4
+# Desktop installation
 
-User flow: one setup EXE → Installieren → desktop/start-menu shortcut → choose
-game once if necessary → Mit Mod spielen → in-game Solo/Koop.
+Default user flow: extract the full mod ZIP into the game installation folder →
+open Azeroth Survivors Koop.exe beside AzerothSurvivors.exe → Mit Mod spielen →
+in-game Solo/Koop. A separate setup wizard is not required.
+
+## Portable ZIP (dev.7+)
+
+dist/AzerothSurvivors-Koop-Mod.zip contains a root-level Koop launcher,
+Koop-Mod-Liesmich.txt and AzerothCoopMod. The latter holds an ownership marker,
+portable.json and versioned complete runtimes. No game files are included or
+overwritten. The launcher uses the adjacent game rather than silently choosing
+another saved installation when the adjacent build is unsupported.
+
+Automatic updates use the existing signed setup download as a hidden helper,
+with a portable target. It extracts into a new version directory inside
+AzerothCoopMod, replaces the root Koop launcher, and switches portable.json.
+Previous runtime versions are retained. The helper does not migrate the ZIP
+installation into the per-user app folder or create shortcuts. The game folder
+must be writable. Profiles/settings stay in the existing per-user data directory.
 
 ## Distribution
 
@@ -45,6 +61,13 @@ Play. Missing game, unsupported update, missing assets and damaged package have
 German explanations. Selection is persisted; no IP/token configuration appears
 in this launcher. That choice stays inside the game.
 
+Starting with dev.7, startup validates the runtime layout before reading the
+updater metadata. A bare launcher copied next to the game redirects to the
+complete owned per-user installation, after checking its package hashes and
+installation target. If no complete installation exists, a recovery window links
+to the official mod ZIP releases. Players should extract the entire ZIP
+instead of copying the contents of a development bin folder into the game.
+
 The backend runs hidden. Its Windows PowerShell module path is initialized
 independently of an inherited PowerShell 7 environment. UTF-8 and Windows argument
 quoting cover paths containing spaces and umlauts. Long installed paths use a
@@ -71,3 +94,15 @@ The Windows Settings uninstall dialog and a human click on the installed
 desktop shortcut were not exercised interactively. These checks do not establish
 a rendered two-player run, real LAN/Internet access, or new-game-build support.
 The outstanding co-op work listed in STATUS.md remains.
+
+The dev.7 startup regression tests also execute actual relocated launcher
+processes without opening interactive windows. They cover complete installs,
+bare EXEs with and without an installed fallback, malformed metadata/state,
+missing backend files and corrupt package binaries. The recovery window is
+rendered offscreen. These probes do not represent a human double-click test.
+
+Portable tests extract the real built ZIP, run the portable startup probe,
+reject an unknown adjacent game, and execute the actual hidden update helper
+against an isolated fixture. That helper test reinstalls the same version; it
+does not claim an older-to-newer public portable upgrade. It checks that game
+files, character saves and the previous runtime remain intact.

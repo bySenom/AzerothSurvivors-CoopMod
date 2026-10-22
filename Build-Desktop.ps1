@@ -85,3 +85,38 @@ Copy-Item -LiteralPath $stagedSetup -Destination $setup -Force
 $digest=(Get-FileHash -LiteralPath $setup -Algorithm SHA256).Hash.ToLowerInvariant()
 ($digest+'  '+(Split-Path -Leaf $setup)) | Set-Content -LiteralPath ($setup+'.sha256') -Encoding ASCII
 Write-Output ('Built consumer setup: '+$setup)
+$portableStage=Join-Path $build ('portable-'+[Guid]::NewGuid().ToString('N'))
+$portableRoot=Join-Path $portableStage 'AzerothCoopMod'
+$portableRuntime=Join-Path $portableRoot ('versions\'+$metadata.version)
+New-Item -ItemType Directory -Path $portableRoot -Force | Out-Null
+[IO.Compression.ZipFile]::ExtractToDirectory($payload,$portableRuntime)
+Copy-Item -LiteralPath (Join-Path $root 'bin\Azeroth Survivors Koop.exe') -Destination (Join-Path $portableStage 'Azeroth Survivors Koop.exe')
+[IO.File]::WriteAllText((Join-Path $portableRoot '.azs-portable-owned'),'AzerothSurvivorsCoopMod.Portable.v1',(New-Object Text.UTF8Encoding($false)))
+$portableState=[ordered]@{schema=1;version=$metadata.version;runtime=('versions/'+$metadata.version)}
+[IO.File]::WriteAllText((Join-Path $portableRoot 'portable.json'),($portableState | ConvertTo-Json -Compress),(New-Object Text.UTF8Encoding($false)))
+@'
+Azeroth Survivors Koop-Mod
+
+1. Den gesamten Inhalt dieses ZIPs direkt in den Spielordner entpacken.
+   Azeroth Survivors Koop.exe und der Ordner AzerothCoopMod muessen neben
+   AzerothSurvivors.exe und dem vorhandenen Data-Ordner liegen.
+2. Azeroth Survivors Koop.exe starten, dann Mit Mod spielen.
+3. Im Spiel Wald von Elwynn betreten -> Solo / Koop.
+
+Kein separates Setup und kein Kopieren einzelner DLLs noetig.
+Mod-Updates werden automatisch geprueft und im selben Spielordner installiert.
+Der Ordner muss fuer dein Windows-Konto beschreibbar sein.
+Mod-Spielstaende und Einstellungen bleiben unter
+%LOCALAPPDATA%\AzerothSurvivorsCoopMod erhalten.
+
+Dies ist eine unfertige Preview. Unterstuetzter Spielbuild: 0.104.0 / 9845e5c7.
+Neuere Spielbuilds benoetigen eine gesonderte Mod-Anpassung.
+https://github.com/bySenom/AzerothSurvivors-CoopMod
+'@ | Set-Content -LiteralPath (Join-Path $portableStage 'Koop-Mod-Liesmich.txt') -Encoding UTF8
+$portableArchive=Join-Path $root 'dist\AzerothSurvivors-Koop-Mod.zip'
+$stagedArchive=Join-Path $build ('portable-release-'+[Guid]::NewGuid().ToString('N')+'.zip')
+[IO.Compression.ZipFile]::CreateFromDirectory($portableStage,$stagedArchive,[IO.Compression.CompressionLevel]::Optimal,$false)
+Copy-Item -LiteralPath $stagedArchive -Destination $portableArchive -Force
+((Get-FileHash -LiteralPath $portableArchive -Algorithm SHA256).Hash.ToLowerInvariant()+'  '+(Split-Path -Leaf $portableArchive)) |
+    Set-Content -LiteralPath ($portableArchive+'.sha256') -Encoding ASCII
+Write-Output ('Built portable mod ZIP: '+$portableArchive)

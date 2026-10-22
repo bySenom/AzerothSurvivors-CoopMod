@@ -23,6 +23,8 @@ try {
         $path=Join-Path $root 'dist\update.json'
         $supported=@($metadata.compatibleBuilds | ForEach-Object {(Get-Content -LiteralPath (Join-Path $root $_) -Raw | ConvertFrom-Json).executableSha256})
         $data=[ordered]@{schema=1;version=$metadata.version;channel='preview';asset=$setup.Name;size=$setup.Length;sha256=(Get-FileHash -LiteralPath $setup.FullName -Algorithm SHA256).Hash.ToLowerInvariant();supportedGameSha256=$supported}
+        $portable=Get-Item -LiteralPath (Join-Path $root 'dist\AzerothSurvivors-Koop-Mod.zip')
+        $data.portableArchive=[ordered]@{asset=$portable.Name;size=$portable.Length;sha256=(Get-FileHash -LiteralPath $portable.FullName -Algorithm SHA256).Hash.ToLowerInvariant()}
     }
     [IO.File]::WriteAllText($path,($data | ConvertTo-Json -Depth 4 -Compress),(New-Object Text.UTF8Encoding($false)))
     $bytes=[IO.File]::ReadAllBytes($path)

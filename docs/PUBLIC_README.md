@@ -8,19 +8,28 @@ MPQs, game assets or personal character profiles.
 ## Installieren
 
 1. Unter [Releases](https://github.com/bySenom/AzerothSurvivors-CoopMod/releases)
-   die aktuelle Preview öffnen und AzerothSurvivors-Koop-Setup.exe herunterladen.
-2. Installieren anklicken und Azeroth Survivors Koop vom Desktop/Startmenü öffnen.
-3. Einmal die eigene unterstützte Spielinstallation auswählen, dann Mit Mod spielen.
+   die aktuelle Preview öffnen und **AzerothSurvivors-Koop-Mod.zip** herunterladen.
+2. Den gesamten Inhalt direkt in den Spielordner entpacken. Der Koop-Starter und
+   der Ordner AzerothCoopMod müssen neben AzerothSurvivors.exe und Data liegen.
+3. **Azeroth Survivors Koop.exe** öffnen, dann **Mit Mod spielen**.
 4. Im Spiel Wald von Elwynn betreten anklicken → Solo / Koop.
 5. Bei Koop eine Lobby erstellen oder den Code des Gastgebers eingeben.
 
 Windows 10/11 x64 mit .NET Framework 4.8. Das Spiel ist separat erforderlich.
-Installation und Updates laufen pro Windows-Benutzerkonto.
+Ein separates Setup ist für die ZIP-Version nicht nötig. Der Starter verwendet
+die Spielinstallation in seinem Ordner. Die Mod-Dateien liegen in AzerothCoopMod;
+Spielstände und Einstellungen bleiben unter %LOCALAPPDATA%\AzerothSurvivorsCoopMod.
+Der Spielordner muss zum Entpacken und Aktualisieren beschreibbar sein.
 
 Der Starter prüft beim Öffnen automatisch auf Mod-Updates und installiert
-verifizierte neue Versionen. Während eines Mod-Spiels wartet das Update.
+verifizierte neue Versionen im selben Spielordner. Während eines Mod-Spiels wartet das Update.
 Automatische Updates können im Starter deaktiviert werden; die manuelle
 Update-Prüfung bleibt verfügbar. Einstellungen und Mod-Spielstände bleiben erhalten.
+
+Die Setup-EXE bleibt für ältere Installationen und als automatisch gestarteter
+Update-Helfer verfügbar. Bei einem einzeln kopierten Starter ohne vollständiges
+Paket erscheint ab dev.7 eine Download-Hilfe; eine vorhandene vollständige ältere
+Setup-Installation kann als Rückfall geöffnet werden.
 
 ## Spielkompatibilität
 

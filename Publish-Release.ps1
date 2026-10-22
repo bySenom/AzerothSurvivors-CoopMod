@@ -18,7 +18,7 @@ foreach($entry in $manifest.files){
     if((Get-FileHash -LiteralPath (Join-Path $root ('bin\'+$entry.name)) -Algorithm SHA256).Hash.ToLowerInvariant() -ne $entry.sha256){throw ('Package differs: '+$entry.name)}
 }
 & (Join-Path $root 'Sign-Update.ps1')
-$assets=@('AzerothSurvivors-Koop-Setup.exe','AzerothSurvivors-Koop-Setup.exe.sha256','update.json','update.json.sig') | ForEach-Object {Join-Path $root ('dist\'+$_)}
+$assets=@('AzerothSurvivors-Koop-Mod.zip','AzerothSurvivors-Koop-Mod.zip.sha256','AzerothSurvivors-Koop-Setup.exe','AzerothSurvivors-Koop-Setup.exe.sha256','update.json','update.json.sig') | ForEach-Object {Join-Path $root ('dist\'+$_)}
 & gh release create $tag @assets --repo $repo --target $revision --title ('Koop-Mod '+$metadata.version+' · Preview') --notes-file $NotesFile --prerelease --draft
 if($LASTEXITCODE -ne 0){throw 'Creating the draft release failed.'}
 if($Publish){

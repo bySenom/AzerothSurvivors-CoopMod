@@ -28,7 +28,7 @@ namespace AzerothCoop.Desktop
         {
             return Path.GetFullPath(path).StartsWith(Path.GetFullPath(root).TrimEnd('\\') + "\\", StringComparison.OrdinalIgnoreCase);
         }
-        static void NoReparse(string directory)
+        internal static void NoReparse(string directory)
         {
             var current = new DirectoryInfo(directory);
             while (current != null)
@@ -50,12 +50,18 @@ namespace AzerothCoop.Desktop
                     throw new IOException("Der Zielordner gehört nicht zu dieser Mod-Installation.");
             }
         }
-        static void VerifyPackage(string root)
+        internal static void VerifyPackage(string root)
         {
             var metadata = Json.Read(Path.Combine(root, "mod.json"));
             var manifest = Json.Read(Path.Combine(root, "package-manifest.json"));
+            if (Json.Text(metadata, "id") != "azeroth-survivors-coop") throw new IOException("Das Mod-Paket ist ungültig.");
+            new ModVersion(Json.Text(metadata, "version"));
             if (Json.Text(metadata, "version") != Json.Text(manifest, "modVersion")) throw new IOException("Die Mod-Version im Setup stimmt nicht überein.");
             var records = ((IEnumerable)manifest["files"]).Cast<Dictionary<string, object>>().ToList();
+            var expected = new[] { "AzerothCoop.exe", "azs_coop.dll", "azs_transport.dll", "azs_gameplay.dll", "azs_lobby.dll", Startup.LauncherName };
+            var listed = ((IEnumerable)metadata["nativeFiles"]).Cast<string>().Concat(((IEnumerable)metadata["desktopFiles"]).Cast<string>()).ToArray();
+            if (listed.Length != expected.Length || !listed.OrderBy(n => n).SequenceEqual(expected.OrderBy(n => n)))
+                throw new IOException("Das Mod-Paket ist unvollständig.");
             foreach (var group in new[] { "nativeFiles", "desktopFiles" })
             {
                 foreach (var name in ((IEnumerable)metadata[group]).Cast<string>())
@@ -67,9 +73,34 @@ namespace AzerothCoop.Desktop
                         throw new IOException("Eine Mod-Datei im Setup ist beschädigt: " + name);
                 }
             }
-            foreach (var name in new[] { "Launch-CoopMod.ps1", "compat" })
-                if (!File.Exists(Path.Combine(root, name)) && !Directory.Exists(Path.Combine(root, name)))
-                    throw new IOException("Das Setup ist unvollständig.");
+            if (!File.Exists(Path.Combine(root, "Launch-CoopMod.ps1"))) throw new IOException("Das Setup ist unvollständig.");
+            var adapters = ((IEnumerable)metadata["compatibleBuilds"]).Cast<string>().ToArray();
+            if (adapters.Length == 0) throw new IOException("Das Setup ist unvollständig.");
+            foreach (string adapter in adapters)
+            {
+                string file = Path.GetFullPath(Path.Combine(root, adapter));
+                if (!Under(file, Path.Combine(root, "compat")) || !File.Exists(file)) throw new IOException("Das Setup ist unvollständig.");
+                Json.Read(file);
+            }
+        }
+        internal static void ExtractRuntime(string stage)
+        {
+            Directory.CreateDirectory(stage);
+            using (var stream = Payload())
+            using (var archive = new ZipArchive(stream, ZipArchiveMode.Read))
+            {
+                foreach (var entry in archive.Entries)
+                {
+                    string relative = entry.FullName.Replace('/', '\\');
+                    string target = Path.GetFullPath(Path.Combine(stage, relative));
+                    if (Path.IsPathRooted(relative) || !Under(target, stage) || entry.Length > 32 * 1024 * 1024)
+                        throw new IOException("Das Setup enthält einen ungültigen Dateipfad.");
+                    if (entry.FullName.EndsWith("/")) { Directory.CreateDirectory(target); continue; }
+                    Directory.CreateDirectory(Path.GetDirectoryName(target));
+                    entry.ExtractToFile(target, false);
+                }
+            }
+            VerifyPackage(stage);
         }
         public string Install(bool desktopShortcut, bool register, string game)
         {
@@ -80,22 +111,7 @@ namespace AzerothCoop.Desktop
             string destination = null;
             try
             {
-                Directory.CreateDirectory(stage);
-                using (var stream = Payload())
-                using (var archive = new ZipArchive(stream, ZipArchiveMode.Read))
-                {
-                    foreach (var entry in archive.Entries)
-                    {
-                        string relative = entry.FullName.Replace('/', '\\');
-                        string target = Path.GetFullPath(Path.Combine(stage, relative));
-                        if (Path.IsPathRooted(relative) || !Under(target, stage) || entry.Length > 32 * 1024 * 1024)
-                            throw new IOException("Das Setup enthält einen ungültigen Dateipfad.");
-                        if (entry.FullName.EndsWith("/")) { Directory.CreateDirectory(target); continue; }
-                        Directory.CreateDirectory(Path.GetDirectoryName(target));
-                        entry.ExtractToFile(target, false);
-                    }
-                }
-                VerifyPackage(stage);
+                ExtractRuntime(stage);
                 string version = Json.Text(Json.Read(Path.Combine(stage, "mod.json")), "version");
                 if (version.Length == 0 || version.Any(c => !char.IsLetterOrDigit(c) && c != '.' && c != '-'))
                     throw new IOException("Ungültige Mod-Version.");
@@ -184,6 +200,13 @@ namespace AzerothCoop.Desktop
             string full = Path.GetFullPath(target);
             if (!string.Equals(full, Paths.App, StringComparison.OrdinalIgnoreCase) && !Under(full, Paths.App))
                 throw new IOException("Löschen außerhalb des Mod-App-Ordners wurde verhindert.");
+            DeleteTreeWithin(full, Paths.App);
+        }
+        internal static void DeleteTreeWithin(string target, string boundary)
+        {
+            string full = Path.GetFullPath(target);
+            if (!string.Equals(full, Path.GetFullPath(boundary), StringComparison.OrdinalIgnoreCase) && !Under(full, boundary))
+                throw new IOException("Löschen außerhalb des Mod-Ordners wurde verhindert.");
             if (!Directory.Exists(full)) return;
             // Validate every directory before any recursive deletion. Profiles
             // are siblings of App and are deliberately outside this boundary.

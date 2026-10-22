@@ -35,7 +35,12 @@ namespace AzerothCoop.Desktop
         }
         internal static string RuntimeRoot
         {
-            get { return Path.GetFullPath(Path.Combine(Path.GetDirectoryName(Application.ExecutablePath), "..")); }
+            get
+            {
+                string root = Startup.LocalRoot(Application.ExecutablePath);
+                if (root == null) throw new IOException("Die Mod-Dateien fehlen. Bitte entpacke das vollständige Mod-ZIP erneut in den Spielordner.");
+                return root;
+            }
         }
         [STAThread]
         static int Main(string[] args)
@@ -44,6 +49,16 @@ namespace AzerothCoop.Desktop
             try
             {
                 var paths = Locations.User();
+                string testData = Option(args, "/data");
+                if (testData != null && (Flag(args, "/startup-probe") || Flag(args, "/update")))
+                    paths = new Locations(testData, Path.Combine(testData, "probe-desktop"), Path.Combine(testData, "probe-menu"));
+                if (Flag(args, "/startup-probe"))
+                {
+                    var target = Startup.Resolve(Application.ExecutablePath, paths);
+                    Json.Write(Path.GetFullPath(Option(args, "/startup-probe")), new { action = target.Action,
+                        root = target.Root, launcher = target.Launcher, image = Application.ExecutablePath });
+                    return 0;
+                }
                 if (Flag(args, "/update-probe"))
                     return UpdateTests.Live(Option(args, "/update-probe"), Flag(args, "/apply"), paths);
                 if (Flag(args, "/update"))
@@ -61,14 +76,15 @@ namespace AzerothCoop.Desktop
                         var previous = Json.Read(stateFile);
                         if (previous.ContainsKey("desktopShortcut")) desktopShortcut = Json.Flag(previous, "desktopShortcut");
                     }
-                    string launcher = new Installer(paths).Install(desktopShortcut, true, null);
+                    string portable = Option(args, "/portable");
+                    string launcher = portable == null ? new Installer(paths).Install(desktopShortcut, true, null) : Portable.Install(portable, true);
                     Json.Write(Path.Combine(paths.Data, "updates", "last-result.json"), new { schema = 1,
-                        installedVersion = Json.Text(Json.Read(Path.Combine(Path.GetDirectoryName(launcher), "..", "mod.json")), "version"),
-                        success = true, installedAt = DateTimeOffset.Now.ToString("o") });
+                        installedVersion = Json.Text(Json.Read(Path.Combine(Startup.LocalRoot(launcher), "mod.json")), "version"),
+                        portable = portable != null, success = true, installedAt = DateTimeOffset.Now.ToString("o") });
                     if (!Flag(args, "/no-open")) Process.Start(new ProcessStartInfo(launcher) { UseShellExecute = true });
                     return 0;
                 }
-                if (Flag(args, "/self-test")) return SelfTests.Run(Option(args, "/self-test"), Option(args, "/game"), Option(args, "/unsupported"));
+                if (Flag(args, "/self-test")) return SelfTests.Run(Option(args, "/self-test"), Option(args, "/game"), Option(args, "/unsupported"), Option(args, "/portable-zip"));
                 if (Flag(args, "/cleanup"))
                 {
                     int parent;
@@ -118,20 +134,36 @@ namespace AzerothCoop.Desktop
                     return 0;
                 }
                 bool setup = Installer.HasPayload;
-                string mutexName = @"Local\AzerothCoop-" + (setup ? "Setup-" : "Desktop-") + WindowsIdentity.GetCurrent().User.Value;
+                var startup = setup ? null : Startup.Resolve(Application.ExecutablePath, paths);
+                if (startup != null && startup.Redirect) { Startup.Open(startup); return 0; }
+                string suffix = setup ? "" : Startup.InstanceSuffix(startup.Root);
+                string mutexName = @"Local\AzerothCoop-" + (setup ? "Setup-" : "Desktop-") + WindowsIdentity.GetCurrent().User.Value + suffix;
                 bool created;
                 using (var mutex = new Mutex(true, mutexName, out created))
                 {
                     if (!created)
                     {
-                        var window = FindWindow(null, setup ? "Azeroth Survivors Koop – Installation" : "Azeroth Survivors Koop");
+                        IntPtr window = IntPtr.Zero;
+                        if (suffix.Length == 0) window = FindWindow(null, setup ? "Azeroth Survivors Koop – Installation" : "Azeroth Survivors Koop");
+                        else foreach (var process in Process.GetProcessesByName(Path.GetFileNameWithoutExtension(Application.ExecutablePath)))
+                        {
+                            using (process)
+                            {
+                                try
+                                {
+                                    if (process.Id != Process.GetCurrentProcess().Id && string.Equals(process.MainModule.FileName,
+                                        Application.ExecutablePath, StringComparison.OrdinalIgnoreCase)) { window = process.MainWindowHandle; break; }
+                                }
+                                catch { }
+                            }
+                        }
                         if (window != IntPtr.Zero) { ShowWindow(window, 9); SetForegroundWindow(window); }
                         return 0;
                     }
                     try
                     {
                         Application.Run(setup ? (Form)new SetupWindow(new Installer(paths)) :
-                            new LaunchWindow(new Backend(RuntimeRoot, paths)));
+                            startup.Root == null ? (Form)new RepairWindow() : new LaunchWindow(new Backend(startup.Root, paths)));
                     }
                     finally { mutex.ReleaseMutex(); }
                 }

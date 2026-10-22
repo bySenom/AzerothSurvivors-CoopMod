@@ -236,6 +236,25 @@ namespace AzerothCoop.Desktop
         internal bool PlayEnabled { get { return play.Enabled; } }
         internal string StatusHeading { get { return heading.Text; } }
     }
+    internal sealed class RepairWindow : ModWindow
+    {
+        internal RepairWindow()
+        {
+            Header("Mod-ZIP in den Spielordner entpacken. Danach den Koop-Starter öffnen.");
+            TextAt("Koop-Mod-Dateien fehlen", 31, 194, 690, 39, 21, Gold);
+            TextAt("Diese Starter-Datei wurde einzeln kopiert oder das Mod-Paket ist unvollständig.\n\nEntpacke den gesamten Inhalt des Mod-ZIPs in den Spielordner. Neben dem Koop-Starter muss auch der Ordner AzerothCoopMod liegen. Mod-Spielstände bleiben erhalten.",
+                32, 246, 692, 131, 11, Muted);
+            var download = ButtonAt("Mod-ZIP herunterladen", 32, 407, 494, 56, true);
+            var close = ButtonAt("Schließen", 546, 407, 180, 56, false);
+            TextAt("Auf GitHub: AzerothSurvivors-Koop-Mod.zip unter der aktuellen Preview öffnen.", 32, 486, 695, 31, 9, Muted);
+            download.Click += (s, e) =>
+            {
+                try { Process.Start(new ProcessStartInfo(Startup.Releases) { UseShellExecute = true }); }
+                catch { MessageBox.Show(this, "Öffne die Download-Seite im Browser:\n" + Startup.Releases, "Mod-ZIP herunterladen"); }
+            };
+            close.Click += (s, e) => Close();
+        }
+    }
     internal sealed class SetupWindow : ModWindow
     {
         readonly Installer installer;

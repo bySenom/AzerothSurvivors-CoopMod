@@ -12,6 +12,8 @@ Each release must include:
 - AzerothSurvivors-Koop-Setup.exe.sha256
 - update.json
 - update.json.sig
+- AzerothSurvivors-Koop-Mod.zip (default manual installation)
+- AzerothSurvivors-Koop-Mod.zip.sha256
 
 The launcher verifies the manifest's RSA-3072/SHA-256 signature against the public
 key in src/desktop/UpdateTrust.cs. It requires the tag/version, channel, size and
@@ -26,6 +28,14 @@ defers installation. The helper waits for the old launcher to exit, installs a
 new immutable app version, redirects shortcuts, and opens the new launcher.
 Profiles, game selection and automatic-update/desktop preferences are preserved.
 The old app version remains available on disk for recovery.
+
+For ZIP installs, the same signed download is used as a hidden update helper
+with an explicit portable target. It installs a new runtime under the game's
+AzerothCoopMod folder and replaces only the root Koop launcher and the mod's
+pointer file. Game files and per-user saves/settings remain intact. No setup
+wizard or migration to a per-user app installation is involved. The signed
+manifest also records the bootstrap ZIP's size and SHA-256. Older setup-based
+installations retain their existing update route.
 
 This does not update the game or enable unknown native builds. Windows
 Authenticode signing and this mod-specific update signature are separate; the

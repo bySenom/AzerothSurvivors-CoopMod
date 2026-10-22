@@ -28,7 +28,7 @@ namespace AzerothCoop.Desktop
             }
             Require(GetForegroundWindow() == foreground, "offscreen test changed foreground window");
         }
-        public static int Run(string output, string supported, string unsupported)
+        public static int Run(string output, string supported, string unsupported, string portableZip)
         {
             if (string.IsNullOrWhiteSpace(output)) throw new Exception("self-test requires an output directory");
             output = Path.GetFullPath(output); Directory.CreateDirectory(output);
@@ -51,6 +51,8 @@ namespace AzerothCoop.Desktop
                 Require(!File.Exists(Path.Combine(root, "Start-CompatibleBuild.cmd")), "machine-specific development shortcut shipped");
                 Require(!System.Text.RegularExpressions.Regex.IsMatch(File.ReadAllText(Path.Combine(root, "mod.json")), @"(?i)[a-z]:\\\\users\\\\"), "machine-specific path shipped");
                 UpdateTests.Run(output);
+                StartupTests.Run(folder, launcher, paths, output);
+                PortableTests.Run(folder, paths, output, portableZip);
                 if (!string.IsNullOrEmpty(supported))
                 {
                     var check = backend.Probe(supported);
@@ -93,6 +95,7 @@ namespace AzerothCoop.Desktop
                 var blocked = new LaunchWindow(backend); blocked.SetCheck(new Check { Game = unsupported ?? @"C:\Spiele\AzerothSurvivors.exe", Reason = "unsupported_game_build" });
                 Require(!blocked.PlayEnabled, "unsupported game start enabled"); Capture(blocked, Path.Combine(output, "launcher-unsupported.png"));
                 Capture(new SetupWindow(installer), Path.Combine(output, "setup.png"));
+                Capture(new RepairWindow(), Path.Combine(output, "launcher-repair.png"));
                 string second = installer.Install(true, false, supported);
                 Require(second != launcher && File.Exists(launcher) && File.Exists(second), "upgrade did not retain immutable old install");
                 Require(Json.Hash(save) == before, "reinstall modified character save");
@@ -107,6 +110,8 @@ namespace AzerothCoop.Desktop
                 result["installedBackendSupportedBuild"] = !string.IsNullOrEmpty(supported);
                 result["installedBackendUpdatedBuildRejected"] = !string.IsNullOrEmpty(unsupported);
                 result["updateValidation"] = true;
+                result["relocatedLauncherRecovery"] = true;
+                result["portableInstallAndUpdate"] = true;
                 Json.Write(Path.Combine(output, "result.json"), result); return 0;
             }
             catch (Exception ex)

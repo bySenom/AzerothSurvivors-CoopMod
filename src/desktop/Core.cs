@@ -94,7 +94,7 @@ namespace AzerothCoop.Desktop
                 if (Reason == "game_not_found") return "Wähle einmal deine AzerothSurvivors.exe. Die App merkt sich deine Auswahl.";
                 if (Reason == "unsupported_game_build") return "Für dieses Spielupdate fehlt noch die passende Mod-Anpassung. Wähle eine unterstützte Installation (0.104.0 / 9845e5c7). Deine Spielstände bleiben erhalten.";
                 if (Reason == "game_data_missing") return "Neben der Spieldatei muss der vollständige Data-Ordner des Spiels liegen.";
-                if (Reason.StartsWith("native_package") || Reason == "build_mod_first") return "Öffne die Setup-Datei erneut, um die Mod-Dateien zu reparieren. Deine Spielstände bleiben erhalten.";
+                if (Reason.StartsWith("native_package") || Reason == "build_mod_first") return "Entpacke das vollständige Mod-ZIP erneut in den Spielordner oder repariere eine ältere Setup-Installation mit deren Setup. Deine Spielstände bleiben erhalten.";
                 return "Wähle die Spieldatei erneut. Einzelheiten findest du unter Hilfe.";
             }
         }
@@ -103,6 +103,7 @@ namespace AzerothCoop.Desktop
     {
         public readonly string Root;
         public readonly Locations Paths;
+        internal string PortableGameRoot { get { return Portable.GameDirectory(Root); } }
         readonly string profile;
         public Backend(string root, Locations paths, string profileName = "Main")
         {
@@ -185,6 +186,8 @@ namespace AzerothCoop.Desktop
         }
         public IEnumerable<string> Candidates()
         {
+            string portable = PortableGameRoot;
+            if (portable != null) return new[] { Path.Combine(portable, "AzerothSurvivors.exe") };
             var candidates = new List<string>();
             foreach (var name in new[] { Paths.Settings, Path.Combine(Paths.Data, "settings.json") })
             {
