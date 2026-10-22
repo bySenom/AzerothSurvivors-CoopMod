@@ -1,0 +1,9 @@
+{
+  "gameVersion": "0.104.0",
+  "gameRevision": "9845e5c7",
+  "platform": "windows-x64",
+  "executableSha256": "96e24dcd0e53fc13a6fdef5826aa46f77a29aa1aad4abd585adf04e94b2756d3",
+  "preferredImageBase": "0x140000000",
+  "nativeBindings": ["src/build_contract.hpp", "src/transport_contract.hpp", "src/gameplay_contract.hpp", "src/lobby_contract.hpp"],
+  "unknownBuildPolicy": "Do not inject. Preserve mod source and persistent profiles. Refresh this native compatibility adapter after inspecting the new game build."
+}

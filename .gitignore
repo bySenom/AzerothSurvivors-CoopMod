@@ -1,0 +1,10 @@
+/bin/
+/dist/
+/game/
+/build*/
+/runtime/
+__pycache__/
+*.dpapi
+*.pfx
+*.p12
+*-private-key*

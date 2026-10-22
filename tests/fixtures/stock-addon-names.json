@@ -1,0 +1,17 @@
+{
+  "names": [
+    "Blizzard_AuctionUI",
+    "Blizzard_BattlefieldMinimap",
+    "Blizzard_BindingUI",
+    "Blizzard_CombatText",
+    "Blizzard_CraftUI",
+    "Blizzard_GMSurveyUI",
+    "Blizzard_InspectUI",
+    "Blizzard_MacroUI",
+    "Blizzard_RaidUI",
+    "Blizzard_TalentUI",
+    "Blizzard_TradeSkillUI",
+    "Blizzard_TrainerUI"
+  ],
+  "source": "https://github.com/OutThisLife/azeroth-survivors-re/blob/dd5e330d7dbdcd25e0989535d71c49198a31819b/crates/benilla-protocol/src/messages/addons.rs"
+}
