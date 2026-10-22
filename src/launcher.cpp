@@ -163,6 +163,29 @@ std::string query(DWORD pid, const std::wstring& prefix = L"AzerothCoop-", const
     require(ReadFile(pipe.value, buffer, sizeof(buffer), &read, nullptr), "Reading module status");
     return std::string(buffer, read);
 }
+std::wstring environment_value(const wchar_t* key) {
+    const auto size=GetEnvironmentVariableW(key,nullptr,0);
+    if(!size) return {};
+    std::wstring value(size,L'\0');
+    value.resize(GetEnvironmentVariableW(key,value.data(),size)); return value;
+}
+void start_crash_watcher(DWORD pid) {
+    const auto watcher=environment_value(L"AZS_COOP_WATCHER");
+    const auto session=environment_value(L"AZS_COOP_CRASH_DIR");
+    if(watcher.empty() || session.empty()) return; // Development CLI without desktop package.
+    const auto ready_name=L"Local\\AzerothCoopWatchReady-"+std::to_wstring(pid);
+    Handle ready(CreateEventW(nullptr,TRUE,FALSE,ready_name.c_str()));
+    require(ready.value!=nullptr,"Creating crash watcher readiness event");
+    auto command=L"\""+watcher+L"\" /watch-game "+std::to_wstring(pid)+L" /session \""+session+L"\" /quiet";
+    STARTUPINFOW startup{}; startup.cb=sizeof(startup);
+    PROCESS_INFORMATION helper{};
+    // No inherited stdout/stderr handles: the launcher must be able to exit
+    // independently of this long-lived observer.
+    require(CreateProcessW(watcher.c_str(),command.data(),nullptr,nullptr,FALSE,CREATE_NO_WINDOW,nullptr,nullptr,&startup,&helper),"Starting crash watcher");
+    Handle helper_process(helper.hProcess),helper_thread(helper.hThread);
+    HANDLE waits[]{ready.value,helper_process.value};
+    require(WaitForMultipleObjects(2,waits,FALSE,10000)==WAIT_OBJECT_0,"Crash watcher readiness");
+}
 }
 
 int wmain(int argc, wchar_t** argv) {
@@ -225,10 +248,12 @@ int wmain(int argc, wchar_t** argv) {
         STARTUPINFOW startup{}; startup.cb = sizeof(startup);
         if(test_client || host_probe || join_probe || play_probe) { startup.dwFlags=STARTF_USESHOWWINDOW; startup.wShowWindow=SW_SHOWMINNOACTIVE; }
         PROCESS_INFORMATION info{};
-        require(CreateProcessW(game.c_str(), command.data(), nullptr, nullptr, FALSE, CREATE_UNICODE_ENVIRONMENT,
+        require(CreateProcessW(game.c_str(), command.data(), nullptr, nullptr, FALSE, CREATE_UNICODE_ENVIRONMENT | CREATE_SUSPENDED,
             env.data(), profile.c_str(), &startup, &info), "Launching game with external mod profile");
         Handle process(info.hProcess), primary_thread(info.hThread);
         try {
+            start_crash_watcher(info.dwProcessId);
+            require(ResumeThread(primary_thread.value)!=static_cast<DWORD>(-1),"Resuming monitored game");
             inject(process.value, info.dwProcessId, dll);
             const auto ready_name = L"Local\\AzerothCoopReady-" + std::to_wstring(info.dwProcessId);
             Handle ready;

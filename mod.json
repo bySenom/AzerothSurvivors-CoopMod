@@ -1,7 +1,7 @@
 {
   "id": "azeroth-survivors-coop",
   "name": "Azeroth Survivors Co-op Mod",
-  "version": "0.1.0-dev.9",
+  "version": "0.1.0-dev.10",
   "status": "development",
   "players": 2,
   "transportProtocol": 2,

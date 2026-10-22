@@ -14,7 +14,7 @@ foreach($directory in @('src','scripts','tests','third_party\minhook','compat'))
         Where-Object {$_.FullName -notmatch '[\\/](__pycache__|\.git)[\\/]'} |
         ForEach-Object {$_.FullName.Substring($root.Length+1)})
 }
-$files+=@('docs\UPDATER.md','docs\CONSUMER_SETUP.md','docs\PUBLIC_README.md','docs\NATIVE_ADAPTERS.md')
+$files+=@('docs\UPDATER.md','docs\CONSUMER_SETUP.md','docs\PUBLIC_README.md','docs\NATIVE_ADAPTERS.md','docs\CRASH_LOGS.md')
 foreach($relative in $files){
     $source=Join-Path $root $relative
     $target=Join-Path $Destination $relative

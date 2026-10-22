@@ -55,6 +55,16 @@ noch nicht abgenommen.
 
 ## Entwicklungsstand
 
+Ab dev.10 zeichnet ein unabhängiger Helfer Spielabbrüche auf, auch wenn der
+Starter geschlossen wurde. **Crashlogs** im Starter öffnet die automatisch
+erstellten ZIP-Berichte. Enthalten sind Exit-Code, Build, letzte Mod-Zustände
+und bei erfassten nativen Exceptions ein Minidump. Es wird nichts automatisch
+hochgeladen. Beim nächsten Fehler das neueste ZIP des betroffenen Spielers
+teilen. Details: [Crashlogs](docs/CRASH_LOGS.md).
+
+dev.10 korrigiert außerdem die veraltete Gast-Stream-Hook-Adresse für den neuen
+Spielbuild. Der native Gast-Pfad wird jetzt für beide Build-Adapter getestet.
+
 Implementiert und getestet: in-game Solo/Koop-Gate, native Protokoll-/Simulations-
 Prototypen, Lobby/Ready/Start, getrennte Profile, Setup und signaturgeprüfte Updates.
 Offen: vollständige Zwei-Client-Abnahme, alle Klassen, saubere Gegner-Zielwahl,
@@ -68,6 +78,7 @@ Visual Studio 2022 C++ x64, CMake und .NET Framework 4.8:
 
     .\Build-Mod.ps1
     ctest --test-dir build-v2 -C RelWithDebInfo --output-on-failure
+    python tests/test_crash_watch.py --output runtime/crash-tests
     .\dist\AzerothSurvivors-Koop-Setup.exe /self-test C:\Temp\AzsModTests /quiet
 
 Die Tests benötigen keine Spiel-Assets. Die optionalen nativen Startup-Tests

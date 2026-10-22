@@ -48,6 +48,8 @@ namespace AzerothCoop.Desktop
             Application.EnableVisualStyles(); Application.SetCompatibleTextRenderingDefault(false);
             try
             {
+                if (Flag(args, "/watch-game"))
+                    return CrashWatch.Run(int.Parse(Option(args, "/watch-game")), Option(args, "/session"));
                 var paths = Locations.User();
                 string testData = Option(args, "/data");
                 if (testData != null && (Flag(args, "/startup-probe") || Flag(args, "/update")))
@@ -152,7 +154,8 @@ namespace AzerothCoop.Desktop
                                 try
                                 {
                                     if (process.Id != Process.GetCurrentProcess().Id && string.Equals(process.MainModule.FileName,
-                                        Application.ExecutablePath, StringComparison.OrdinalIgnoreCase)) { window = process.MainWindowHandle; break; }
+                                        Application.ExecutablePath, StringComparison.OrdinalIgnoreCase) && process.MainWindowHandle != IntPtr.Zero)
+                                    { window = process.MainWindowHandle; break; }
                                 }
                                 catch { }
                             }

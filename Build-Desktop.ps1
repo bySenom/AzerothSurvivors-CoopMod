@@ -109,6 +109,9 @@ Der Ordner muss fuer dein Windows-Konto beschreibbar sein.
 Mod-Spielstaende und Einstellungen bleiben unter
 %LOCALAPPDATA%\AzerothSurvivorsCoopMod erhalten.
 
+Bei einem Spielabbruch im Starter auf Crashlogs klicken und das neueste ZIP
+des betroffenen Spielers teilen. Es wird nichts automatisch hochgeladen.
+
 Dies ist eine unfertige Preview. Unterstuetzte Spielbuilds:
 Windows EXE SHA-256 dc10453398ceb398076f6d3b6ac7859470de2ff7ccd68ac1d00a02f9f1e5209a
 und 0.104.0 / 9845e5c7. Weitere EXEs benoetigen eine gesonderte Mod-Anpassung.

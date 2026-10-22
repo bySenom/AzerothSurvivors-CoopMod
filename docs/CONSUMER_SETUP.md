@@ -1,5 +1,10 @@
 # Desktop installation
 
+dev.10 adds a **Crashlogs** button. An independent helper records each launched
+game's exit, bounded module-status history and best-effort native minidump.
+Unexpected exits produce local ZIPs under logs/crashes, with separate folders
+per run under logs/sessions. No automatic upload. See [Crash logs](CRASH_LOGS.md).
+
 Default user flow: extract the full mod ZIP into the game installation folder →
 open Azeroth Survivors Koop.exe beside AzerothSurvivors.exe → Mit Mod spielen →
 in-game Solo/Koop. A separate setup wizard is not required.

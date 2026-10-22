@@ -60,3 +60,10 @@ are enabled, and missing exports have specific diagnostic messages. This
 addresses an intermittent startup failure observed during the dev.8 deployment
 check. Six consecutive fresh native starts passed after the change; this is
 startup evidence, not a full rendered co-op acceptance test.
+
+dev.10 fixes three stale legacy RVAs in the guest factory detour/probe path.
+The guest now uses open_rva from its selected adapter (0x58ae240 on the new
+build). A real host plus native guest factory test covers the world challenge
+and 119-byte auth reply for each supported build, in addition to protocol-client
+tests. Process-exit observation and best-effort dumps are described in
+[Crash logs](CRASH_LOGS.md).

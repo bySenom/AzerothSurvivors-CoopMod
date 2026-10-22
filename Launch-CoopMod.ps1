@@ -66,6 +66,8 @@ function Invoke-Native([string[]]$Arguments,[string]$NativeDirectory='') {
     $marker=Join-Path $managedApp '.azs-mod-owned'
     $managed=(Test-Path -LiteralPath $marker) -and ((Get-Content -LiteralPath $marker -Raw) -eq 'AzerothSurvivorsCoopMod.App.v1')
     $start.EnvironmentVariables['AZS_COOP_MODULE_CACHE']=if($managed){Join-Path $managedApp 'modules'}else{Join-Path $DataRoot 'module-cache'}
+    $start.EnvironmentVariables['AZS_COOP_WATCHER']=Join-Path $root 'bin\Azeroth Survivors Koop.exe'
+    if($script:diagnosticSession){$start.EnvironmentVariables['AZS_COOP_CRASH_DIR']=$script:diagnosticSession}
     $start.RedirectStandardOutput=$true;$start.RedirectStandardError=$true
     $process=[Diagnostics.Process]::Start($start)
     $output=$process.StandardOutput.ReadToEnd();$errorText=$process.StandardError.ReadToEnd();$process.WaitForExit()
@@ -94,6 +96,12 @@ function Start-Mod([string]$LaunchMode,[string]$Path,[string]$ProfileName,[strin
         if($running -and $running.Path -eq $compatibility.gamePath){throw 'This mod profile is already running. Close that game window or choose a different profile.'}
     }
     New-Item -ItemType Directory -Path $profilePath,(Join-Path $DataRoot 'logs') -Force | Out-Null
+    $session=Join-Path $DataRoot ('logs\sessions\'+[DateTime]::UtcNow.ToString('yyyyMMddTHHmmssfffffffZ')+'-'+[Guid]::NewGuid().ToString('N').Substring(0,8))
+    New-Item -ItemType Directory -Path $session -Force | Out-Null
+    @{schema=1;modVersion=$metadata.version;gameSha256=$compatibility.gameSha256;adapter=$nativeDirectory;mode=$LaunchMode;startedUtc=[DateTime]::UtcNow.ToString('o')} |
+        ConvertTo-Json | Set-Content -LiteralPath (Join-Path $session 'session.json') -Encoding UTF8
+    # Child-only environment: never expose room codes or profile contents in reports.
+    $script:diagnosticSession=$session
     $save=Join-Path $profilePath 'characters.txt'
     if(Test-Path -LiteralPath $save){
         $backup=Join-Path $DataRoot ('backups\'+$ProfileName+'\'+[DateTime]::UtcNow.ToString('yyyyMMddTHHmmssfffffffZ'))
@@ -125,7 +133,7 @@ function Start-Mod([string]$LaunchMode,[string]$Path,[string]$ProfileName,[strin
         if($child -and $child.Path -eq $compatibility.gamePath){Stop-Process -Id $child.Id -Force}
         throw
     }
-    $result=[ordered]@{modVersion=$metadata.version;mode=$LaunchMode;pid=$instance.pid;gamePath=$compatibility.gamePath;profilePath=$profilePath;inGameLobby=($LaunchMode -eq 'Play');address=$HostAddress;port=$HostPort;completeCoopVerified=$false}
+    $result=[ordered]@{modVersion=$metadata.version;mode=$LaunchMode;pid=$instance.pid;gamePath=$compatibility.gamePath;profilePath=$profilePath;sessionPath=$session;inGameLobby=($LaunchMode -eq 'Play');address=$HostAddress;port=$HostPort;completeCoopVerified=$false}
     $result | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $DataRoot ('logs\last-'+$LaunchMode.ToLowerInvariant()+'.json')) -Encoding UTF8
     return [pscustomobject]$result
 }

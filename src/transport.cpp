@@ -383,7 +383,7 @@ std::string command(const std::string& text) {
             check(used==2,"invalid_probe_hex"); request.push_back(static_cast<unsigned char>(value));
         }
         LocalStream stream; void* arc = server_arc();
-        const auto callback=action=="probe-redirected" ? native<OpenLocal>(0x05878ce0) : open_original;
+        const auto callback=action=="probe-redirected" ? native<OpenLocal>(azs::open_rva) : open_original;
         callback(&stream, &arc, static_cast<std::uint16_t>(port));
         if(!request.empty()) put(stream.tx,request.data(),request.size());
         std::vector<unsigned char> bytes;
@@ -413,9 +413,9 @@ std::string command(const std::string& text) {
         { std::lock_guard lock(configuration_mutex); remote_host = address; bridge_port = static_cast<std::uint16_t>(port); token = room_token; }
         auto result = MH_Initialize();
         check(result == MH_OK || result == MH_ERROR_ALREADY_INITIALIZED, "hook_library_failed");
-        result = MH_CreateHook(native<void*>(0x05878ce0), &open_redirected, reinterpret_cast<void**>(&open_original));
+        result = MH_CreateHook(native<void*>(azs::open_rva), &open_redirected, reinterpret_cast<void**>(&open_original));
         check(result == MH_OK, "factory_hook_failed");
-        check(MH_EnableHook(native<void*>(0x05878ce0)) == MH_OK, "factory_hook_enable_failed");
+        check(MH_EnableHook(native<void*>(azs::open_rva)) == MH_OK, "factory_hook_enable_failed");
         const auto observe=azs::extension<azs::RegisterTickObserver>("azs_register_tick_observer");
         check(observe && observe(&deliver_ui),"base_tick_observer_unavailable");
         joining.store(true); std::thread(join_ui).detach(); return state();

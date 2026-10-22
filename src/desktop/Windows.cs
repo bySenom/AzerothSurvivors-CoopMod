@@ -102,7 +102,8 @@ namespace AzerothCoop.Desktop
             select = ButtonAt("Spiel auswählen", 384, 389, 342, 56, false);
             var saves = ButtonAt("Spielstände", 32, 465, 150, 34, false);
             var help = ButtonAt("Hilfe", 196, 465, 100, 34, false);
-            footer = TextAt("Koop über zwei PCs ist noch nicht vollständig getestet.", 319, 468, 409, 39, 9, Muted);
+            var crashes = ButtonAt("Crashlogs", 310, 465, 118, 34, false);
+            footer = TextAt("Koop über zwei PCs ist noch nicht vollständig getestet.", 445, 463, 283, 48, 9, Muted);
             updateStatus = TextAt("Mod " + updates.Current + " · Updates über GitHub", 32, 524, 457, 44, 10, Muted);
             updateButton = ButtonAt("Nach Updates suchen", 510, 520, 216, 42, false);
             automatic = new CheckBox { Text = "Mod-Updates beim Start automatisch installieren", Checked = updates.Automatic,
@@ -117,11 +118,12 @@ namespace AzerothCoop.Desktop
                     if (picker.ShowDialog(this) == DialogResult.OK) await RefreshGame(picker.FileName);
             };
             saves.Click += (s, e) => { try { OpenFolder(backend.Paths.Profile); } catch (Exception ex) { ShowError(ex); } };
+            crashes.Click += (s, e) => { try { OpenFolder(backend.Paths.Crashes); } catch (Exception ex) { ShowError(ex); } };
             help.Click += (s, e) => MessageBox.Show(this,
                 "1. Wähle einmal deine Spieldatei aus.\n2. Klicke auf „Mit Mod spielen“.\n3. Klicke im Spiel auf „Wald von Elwynn betreten“.\n4. Wähle Solo oder Koop. Bei Koop: Lobby erstellen oder Code eingeben.\n\n" +
                 "Beide Spieler benötigen dieselbe unterstützte Spiel- und Mod-Version sowie eine erreichbare Netzwerkverbindung. Der Lobbycode übernimmt keine NAT-Weiterleitung.\n\n" +
                 "Diese Mod ist in Entwicklung. Ein kompletter Koop-Lauf über zwei PCs ist noch nicht abgenommen.\n\n" +
-                "Bei Startproblemen liegt das Protokoll hier:\n" + backend.Paths.Log,
+                "Bei einem Spielabbruch: „Crashlogs“ öffnen und das ZIP des betroffenen Spielers teilen. Die Aufzeichnung läuft auch bei geschlossenem Starter. Es wird nichts automatisch hochgeladen.\n\nStarter-Protokoll:\n" + backend.Paths.Log,
                 "Hilfe zur Koop-Mod", MessageBoxButtons.OK, MessageBoxIcon.Information);
             play.Click += async (s, e) => await StartGame();
             Shown += async (s, e) =>
@@ -132,7 +134,15 @@ namespace AzerothCoop.Desktop
             };
             timer.Tick += (s, e) =>
             {
-                if (game != null && game.HasExited) { game.Dispose(); game = null; SetCheck(current); }
+                if (game != null && game.HasExited)
+                {
+                    int code = game.ExitCode; game.Dispose(); game = null; SetCheck(current);
+                    if (code != 0)
+                    {
+                        heading.Text = "Spiel unerwartet beendet";
+                        description.Text = "Exit-Code 0x" + unchecked((uint)code).ToString("x8") + ". Der Bericht wird gespeichert. Öffne „Crashlogs“ und teile das neueste ZIP des betroffenen Spielers.";
+                    }
+                }
                 if (!Offscreen && offer != null && automatic.Checked && !starting && !updateBusy && !updating &&
                     !Updates.GameRunning(backend.Paths)) BeginInvoke(new Action(async () => await ApplyUpdate()));
             };

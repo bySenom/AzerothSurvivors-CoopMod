@@ -28,6 +28,7 @@ namespace AzerothCoop.Desktop
         }
         public string Settings { get { return Path.Combine(Data, "launcher.json"); } }
         public string Log { get { return Path.Combine(Data, "logs", "desktop.log"); } }
+        public string Crashes { get { return Path.Combine(Data, "logs", "crashes"); } }
         public string Profile { get { return Path.Combine(Data, "profiles", "Main"); } }
     }
     internal static class Json
