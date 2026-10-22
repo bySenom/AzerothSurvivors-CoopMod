@@ -59,7 +59,7 @@ benötigen eine eigene unterstützte Spielinstallation. Die generierten Bindings
 sind enthalten; für erneutes Auslesen werden Python und pefile benötigt.
 
 Der private Release-Schlüssel ist nicht enthalten. Ein eigener Build besitzt
-keine Berechtigung, Updates für die bestehenden offiziellen Mod-Installationen
+keine Berechtigung, Updates für die bestehenden Mod-Installationen
 zu signieren. Details: [Updater](docs/UPDATER.md).
 
 Die Lizenz des verwendeten MinHook ist in third_party/minhook/LICENSE.txt erhalten.

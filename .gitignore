@@ -3,6 +3,7 @@
 /game/
 /build*/
 /runtime/
+/package-manifest.json
 __pycache__/
 *.dpapi
 *.pfx

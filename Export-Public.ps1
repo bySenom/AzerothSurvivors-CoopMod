@@ -28,6 +28,7 @@ Copy-Item -LiteralPath (Join-Path $root 'docs\PUBLIC_README.md') -Destination (J
 /game/
 /build*/
 /runtime/
+/package-manifest.json
 __pycache__/
 *.dpapi
 *.pfx
