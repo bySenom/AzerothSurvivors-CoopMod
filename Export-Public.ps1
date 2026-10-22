@@ -34,7 +34,8 @@ __pycache__/
 *.p12
 *-private-key*
 '@ | Set-Content -LiteralPath (Join-Path $Destination '.gitignore') -Encoding ASCII
-foreach($file in Get-ChildItem -LiteralPath $Destination -Recurse -File -Force | Where-Object {$_.FullName -notmatch '[\\/]\.git[\\/]'}){
+foreach($relative in @($files+@('README.md') | Select-Object -Unique)){
+    $file=Get-Item -LiteralPath (Join-Path $Destination $relative)
     if($file.Extension -in '.mpq','.exe','.dll','.pdb','.dpapi','.pfx','.p12'){throw ('Forbidden public source file: '+$file.Name)}
     if($file.Extension -in '.cs','.cpp','.hpp','.ps1','.py','.md','.json','.cmd','.txt'){
         $content=[IO.File]::ReadAllText($file.FullName)
