@@ -625,6 +625,12 @@ DWORD WINAPI initialize(void*) {
         send_native_ui=azs::extension<azs::SendNativeUi>("azs_send_native_ui_to");
         set_ui_world=azs::extension<azs::SetUiWorld>("azs_set_ui_world");
         remote_identity=azs::extension<azs::RemoteIdentity>("azs_remote_identity");
+        const auto observe=azs::extension<azs::RegisterTickObserver>("azs_register_tick_observer");
+        if(!send_native_ui) failure="native_ui_sender_unavailable";
+        else if(!set_ui_world) failure="native_ui_world_binding_unavailable";
+        else if(!remote_identity) failure="native_remote_identity_unavailable";
+        else if(!observe) failure="native_tick_observer_unavailable";
+        if(!failure.empty()) return serve(nullptr);
         write_native=entry<Write>(azs::gameplay::write); free_native=entry<Free>(azs::gameplay::free); destroy_native=entry<Destroy>(azs::gameplay::destroy);
         auto result=MH_Initialize();
         if(result==MH_OK) result=MH_CreateHook(entry<void*>(azs::gameplay::serialize),&on_serialize,reinterpret_cast<void**>(&serialize_original));
@@ -632,9 +638,8 @@ DWORD WINAPI initialize(void*) {
         if(result==MH_OK) result=MH_CreateHook(entry<void*>(azs::gameplay::game_tick),&on_tick,reinterpret_cast<void**>(&tick_original));
         if(result==MH_OK) result=MH_CreateHook(entry<void*>(azs::gameplay::construct),&on_construct,reinterpret_cast<void**>(&construct_original));
         if(result==MH_OK) result=MH_EnableHook(MH_ALL_HOOKS);
-        const auto observe=azs::extension<azs::RegisterTickObserver>("azs_register_tick_observer");
-        if(result==MH_OK && send_native_ui && set_ui_world && remote_identity && observe && observe(&after_server_tick)) installed.store(true);
-        else failure=result!=MH_OK?MH_StatusToString(result):"native_session_extensions_unavailable";
+        if(result==MH_OK && observe(&after_server_tick)) installed.store(true);
+        else failure=result!=MH_OK?MH_StatusToString(result):"native_tick_observer_rejected";
     }
     return serve(nullptr);
 }

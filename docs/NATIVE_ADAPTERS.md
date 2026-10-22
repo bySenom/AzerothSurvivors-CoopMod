@@ -53,3 +53,10 @@ revival, disconnect recovery and complete-run rewards remain unverified.
 
 The ZIP and the signed automatic update carry both adapters. Game EXE/Data
 files and existing character profiles are not included or patched.
+
+dev.9 also bounds/retries native export discovery while the game's loader is
+changing its module list. Required session exports are resolved before hooks
+are enabled, and missing exports have specific diagnostic messages. This
+addresses an intermittent startup failure observed during the dev.8 deployment
+check. Six consecutive fresh native starts passed after the change; this is
+startup evidence, not a full rendered co-op acceptance test.
